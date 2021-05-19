@@ -1,4 +1,4 @@
-package com.cimcorp.plc.util.plcUtility;
+package com.cimcorp.plc.util;
 
 import configFileUtil.ParamRangeException;
 import logger.Logger;
@@ -16,6 +16,7 @@ public class PlcLogger extends ApplicationSegment {
     static final String BITMAP_HEADER = ",BMP,";
     static final String ETX = ",";
     static final String STX = ",";
+    static final String RX_ERROR_MSG = "RX_ERROR, MAL-FORMED MESSAGE: ";
 
     private Message<String> fromUdpThreadMsg = null;
     private BitmapHandler bh;
@@ -57,34 +58,42 @@ public class PlcLogger extends ApplicationSegment {
         System.out.println(Thread.currentThread().getName() + " Enabled and Running");
 
         while (true) {
-            // wait on message from the udp listener
-            synchronized (fromUdpThreadMsg) {
-                fromUdpThreadMsg.waitUntilNotifiedOrListNotEmpty();
-            }
-            // consume all messages in the udp listener queue
-            while (!fromUdpThreadMsg.isEmpty()) {
 
-                String t = fromUdpThreadMsg.getNextMsg();
+            try {
 
-                int s = t.indexOf(STX);
-                int x = t.indexOf(ETX);
-
-                if ((s == 0) && (x > 10)) {
-
-                    t = t.substring(2, x);
-
-                    if (t.contains(BITMAP_HEADER)) {
-                        bh.parseLine(t);
-                    } else {
-                        logger.logAndPrint(t);
+                while (true) {
+                    // wait on message from the udp listener
+                    synchronized (fromUdpThreadMsg) {
+                        fromUdpThreadMsg.waitUntilNotifiedOrListNotEmpty();
                     }
-                } else {
+                    // consume all messages in the udp listener queue
+                    while (!fromUdpThreadMsg.isEmpty()) {
 
-                    t = t.concat(" RX_ERROR: MAL-FORMED");
-                    logger.logAndPrint(t);
+                        String t = fromUdpThreadMsg.getNextMsg();
+
+                        int s = t.indexOf(STX);
+                        int x = t.indexOf(ETX);
+
+                        if ((s == 0) && (x > 10)) {
+
+                            t = t.substring(2, x);
+
+                            if (t.contains(BITMAP_HEADER)) {
+                                bh.parseLine(t);
+                            } else {
+                                logger.logAndPrint(t);
+                            }
+                        } else {
+
+                            t = RX_ERROR_MSG + t;
+                            logger.logAndPrint(t);
+                        }
+                    }
+
                 }
+            } catch (Throwable t) {
+                logger.logAndPrint(t.toString());
             }
-
         }
     }
 }

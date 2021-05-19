@@ -1,4 +1,4 @@
-package com.cimcorp.plc.util.plcUtility;
+package com.cimcorp.plc.util;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

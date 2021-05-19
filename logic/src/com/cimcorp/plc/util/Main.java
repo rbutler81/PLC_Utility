@@ -1,20 +1,23 @@
-package com.cimcorp.plc.util.plcUtility;
+package com.cimcorp.plc.util;
+
+import configFileUtil.ParamRangeException;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import configFileUtil.ParamRangeException;
-
 public class Main {
 
     // setup static variables
     static final String VER = "1.0";
-    // plc logger variables
     static final String PATH = Paths.get(".").toAbsolutePath().normalize().toString() + "\\";
+    // plc logger variables
     static final String PLC_LOGGER_INI = "plclogger.ini";
     static final String PLC_LOGGER_NAME = "PLC Logger";
+    // pallet image recognition variables
+    static final String PALLET_IMAGE_INI = "palletimage.ini";
+    static final String PALLET_IMAGE_NAME = "Pallet Image Recognition";
 
     public static void main(String[] args) {
 
@@ -30,6 +33,13 @@ public class Main {
                 } catch (IOException | ParamRangeException e) {
                     e.printStackTrace();
                     System.exit(0);
+                }
+            // if the 'palletimage.ini' is found in the command line arguments
+            } else if (s.equals(PALLET_IMAGE_INI)) {
+                try {
+                    appSegments.add(new PalletImageRecognition(PATH, PALLET_IMAGE_INI, PALLET_IMAGE_NAME));
+                } catch (IOException | ParamRangeException e) {
+                    e.printStackTrace();
                 }
             }
         }
