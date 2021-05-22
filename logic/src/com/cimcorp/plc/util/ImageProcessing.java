@@ -1,11 +1,15 @@
 package com.cimcorp.plc.util;
 
+import threads.Message;
+
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ImageProcessing {
 
@@ -126,6 +130,7 @@ public class ImageProcessing {
         // detect the edges of the boolean image
         int xRes = p.getIp().getCameraResolution_x();
         int yRes = p.getIp().getCameraResolution_y();
+        int edgePixels = 0;
         p.setEdgeImage(new boolean[yRes][xRes]);
 
         for (int y = 0; y < yRes - 1; y++) {
@@ -136,16 +141,20 @@ public class ImageProcessing {
 
                 if (edge > 0) {
                     p.setPointInEdgeImage(x, y, true);
+                    edgePixels = edgePixels + 1;
                 } else {
                     p.setPointInEdgeImage(x, y, false);
                 }
 
             }
         }
+        p.setEdgePixels(edgePixels);
     }
 
     public static void houghTransform(Pallet p) {
 
+        // setup list of arrays to save hough images in
+        List<int[][]> houghLayers = new ArrayList<>();
         // hough transform - find circles in the edge image
         int xRes = p.getIp().getCameraResolution_x();
         int yRes = p.getIp().getCameraResolution_y();
@@ -153,59 +162,88 @@ public class ImageProcessing {
 
         for (int r = p.getFromRadiusPixels(); r <= p.getToRadiusPixels(); r++) {
 
-            p.setHoughAccumulator(new int[yRes][xRes]);
+            int[][] houghAccumulator = oneRadiusHoughIteration(p.getEdgeImage(), r, p.getIp().getHoughThetaIncrement());
 
-            for (int y = 0; y < yRes; y++) {
-                for (int x = 0; x < xRes; x++) {
-
-                    if (p.getEdgeImagePoint(x, y)) {
-
-                        for (int theta = 0; theta < 360; theta = theta + p.getIp().getHoughThetaIncrement()) {
-
-                            // xPoint := x - (r * cos(rad(theta)))
-                            // yPoint := y - (r * sin(rad(theta)))
-                            BigDecimal xPoint = new BigDecimal(Math.cos(Math.toRadians(theta))).setScale(15,RoundingMode.HALF_UP);
-                            xPoint = new BigDecimal(r).multiply(xPoint);
-                            int xPointInt = new BigDecimal(x).subtract(xPoint).setScale(0,RoundingMode.HALF_UP).intValue();
-
-                            BigDecimal yPoint = new BigDecimal(Math.sin(Math.toRadians(theta))).setScale(15,RoundingMode.HALF_UP);
-                            yPoint = new BigDecimal(r).multiply(yPoint);
-                            int yPointInt = new BigDecimal(y).subtract(yPoint).setScale(0,RoundingMode.HALF_UP).intValue();
-
-                            if (valIsBetween(0, xPointInt, xRes-1) && valIsBetween(0, yPointInt, yRes-1)) {
-                                int houghAccumulatorPoint = p.getHoughAccumulatorPoint(xPointInt, yPointInt);
-                                houghAccumulatorPoint = houghAccumulatorPoint + 1;
-                                p.setHoughAccumulatorPoint(xPointInt, yPointInt, houghAccumulatorPoint);
-                            }
-                        }
-
-                    }
-                }
-            }
             // before moving to the next radius, compare the hough array to the hough accumulator array and update the largest values found
-            for (int y = 0; y < yRes; y++) {
-                for (int x = 0; x < xRes; x++) {
-
-                    int houghPoint = p.getHoughAccumulatorPoint(x, y);
-                    RadiusAndValue runningHoughPoint = p.getHoughRunningAccumulatorPoint(x,y);
-
-                    if (houghPoint > runningHoughPoint.getValue()) {
-                        p.setHoughRunningAccumulatorPoint(x, y, houghPoint, r);
-                    }
-
-                }
-            }
+            updateRunningAccumulator(p.getHoughRunningAccumulator(), houghAccumulator, r);
+            // add last hough layer for radius r into the list
+            houghLayers.add(houghAccumulator);
+            
         }
+
         // calculate mean and standard deviation of all the hough accumulated values
-        List<Integer> houghValues = new ArrayList<>();
+        p.setHoughMeanAndStdDeviation(calculateMeanAndStd(p.getHoughRunningAccumulator()));
+
+        p.setHoughLayers(houghLayers);
+    }
+
+    public static MeanStandardDeviation calculateMeanAndStd(RadiusAndValue[][] rAndV) {
+        int yRes = rAndV.length;
+        int xRes = rAndV[0].length;
+        List<Integer> values = new ArrayList<>();
         for (int y = 0; y < yRes; y++) {
             for (int x = 0; x < xRes; x++) {
-                if (p.getHoughRunningAccumulator()[y][x].getValue() > 0) {
-                    houghValues.add(p.getHoughRunningAccumulator()[y][x].getValue());
+                if (rAndV[y][x].getValue() > 0) {
+                    values.add(rAndV[y][x].getValue());
                 }
             }
         }
-        p.setHoughMeanAndStdDeviation(new MeanStandardDeviation(houghValues));
+        return (new MeanStandardDeviation(values));
+    }
+
+    public static void updateRunningAccumulator(RadiusAndValue[][] houghRunningAccumulator, int[][] houghAccumulator, int radius) {
+
+        int yRes = houghAccumulator.length;
+        int xRes = houghAccumulator[0].length;
+
+        for (int y = 0; y < yRes; y++) {
+            for (int x = 0; x < xRes; x++) {
+
+                int value = houghAccumulator[y][x];
+                RadiusAndValue runningHoughPoint = houghRunningAccumulator[y][x];
+
+                if (value > runningHoughPoint.getValue()) {
+                    houghRunningAccumulator[y][x].setValue(value);
+                    houghRunningAccumulator[y][x].setRadius(radius);
+                }
+
+            }
+        }
+    }
+
+    public static int[][] oneRadiusHoughIteration(boolean[][] edgeImage, int radius, int thetaIncrement) {
+
+        int yRes = edgeImage.length;
+        int xRes = edgeImage[0].length;
+        int[][] accumulator = new int[yRes][xRes];
+
+        for (int y = 0; y < yRes; y++) {
+            for (int x = 0; x < xRes; x++) {
+
+                if (edgeImage[y][x]) {
+
+                    for (int theta = 0; theta < 360; theta = theta + thetaIncrement) {
+
+                        // xPoint := (r * cos(rad(theta))) + x
+                        // yPoint := (r * sin(rad(theta))) + y
+                        int xPoint = new BigDecimal(Math.cos(Math.toRadians(theta))).setScale(15,RoundingMode.HALF_UP)
+                                            .multiply(new BigDecimal(radius).setScale(15,RoundingMode.HALF_UP))
+                                            .add(new BigDecimal(x))
+                                            .setScale(0, RoundingMode.HALF_UP).intValue();
+
+                        int yPoint = new BigDecimal(Math.sin(Math.toRadians(theta))).setScale(15,RoundingMode.HALF_UP)
+                                .multiply(new BigDecimal(radius).setScale(15,RoundingMode.HALF_UP))
+                                .add(new BigDecimal(y))
+                                .setScale(0, RoundingMode.HALF_UP).intValue();
+
+                        if (valIsBetween(0, xPoint, xRes -1) && valIsBetween(0, yPoint, yRes -1)) {
+                            accumulator[yPoint][xPoint] = accumulator[yPoint][xPoint] + 1;
+                        }
+                    }
+                }
+            }
+        }
+        return accumulator;
     }
 
     public static void findStacks(Pallet p) {
@@ -324,8 +362,8 @@ public class ImageProcessing {
             // limit coordinates above to inside the image resolution
             xStart = limitInt(0, xStart, xRes - 1);
             xEnd = limitInt(0, xEnd, xRes - 1);
-            yStart = limitInt(0, yStart, xRes - 1);
-            yEnd = limitInt(0, yEnd, xRes - 1);
+            yStart = limitInt(0, yStart, yRes - 1);
+            yEnd = limitInt(0, yEnd, yRes - 1);
 
             // zero the area around the highest value found
             for (int y = yStart; y <= yEnd; y++) {
@@ -509,6 +547,42 @@ public class ImageProcessing {
         int upperLimit = expectedStack.getExpectedHeight() + deviation;
         int lowerLimit = expectedStack.getExpectedHeight() - deviation;
         return valIsBetween(lowerLimit, suspectedStack.getMeasuredHeight(), upperLimit);
+
+    }
+
+    public static void parallelHoughTransform(Pallet p, int threads) {
+
+        Message<HoughMessage> msg = new Message<>();
+        ExecutorService es = Executors.newFixedThreadPool(threads);
+
+        int radiusFrom = p.getFromRadiusPixels();
+        int radiusTo = p.getToRadiusPixels();
+        int thetaIncrement = p.getIp().getHoughThetaIncrement();
+        int xRes = p.getIp().getCameraResolution_x();
+        int yRes = p.getIp().getCameraResolution_y();
+
+        for (int radius = radiusFrom; radius <=radiusTo; radius++) {
+
+            boolean[][] edgeArray = Clone.deepClone(p.getEdgeImage());
+            es.execute(new HoughWorkerThread(radius, thetaIncrement, edgeArray, msg));
+
+        }
+        es.shutdown();
+
+        while (!es.isTerminated()) {}
+
+        RadiusAndValue[][] runningHoughAccumulator = RadiusAndValue.createTwoDimensionalArray(xRes, yRes);
+        List<HoughMessage> houghArrays = msg.removeAll();
+        List<int[][]> arrays = new ArrayList<>();
+        for (HoughMessage hm: houghArrays) {
+            ImageProcessing.updateRunningAccumulator(runningHoughAccumulator, hm.getHoughArray(), hm.getRadius());
+            arrays.add(hm.getHoughArray());
+        }
+        MeanStandardDeviation msd = ImageProcessing.calculateMeanAndStd(runningHoughAccumulator);
+
+        p.setHoughMeanAndStdDeviation(msd);
+        p.setHoughRunningAccumulator(runningHoughAccumulator);
+        p.setHoughLayers(arrays);
 
     }
 

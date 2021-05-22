@@ -15,7 +15,7 @@ public class ApplicationSegment implements Runnable {
     protected LogConfig lc = null;
 
     // Constructor to use with a logger
-    public ApplicationSegment(String path, String iniFileName,  String logFileName, String topLine, boolean useTimeStamp)  throws IOException, ParamRangeException {
+    public ApplicationSegment(String path, String iniFileName, String logFileName, String topLine, boolean useTimeStamp)  throws IOException, ParamRangeException {
 
         // setup the logger
         try {

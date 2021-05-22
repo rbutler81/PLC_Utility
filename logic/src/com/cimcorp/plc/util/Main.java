@@ -32,7 +32,7 @@ public class Main {
                     appSegments.add(new PlcLogger(PATH, PLC_LOGGER_INI, PLC_LOGGER_NAME));
                 } catch (IOException | ParamRangeException e) {
                     e.printStackTrace();
-                    System.exit(0);
+                    System.exit(1);
                 }
             // if the 'palletimage.ini' is found in the command line arguments
             } else if (s.equals(PALLET_IMAGE_INI)) {
@@ -56,10 +56,11 @@ public class Main {
         for (Thread t: threads) {
             try {
                 t.join();
-            } catch (InterruptedException e) {
+            } catch (Throwable e) {
                 e.printStackTrace();
             }
         }
 
     }
+
 }

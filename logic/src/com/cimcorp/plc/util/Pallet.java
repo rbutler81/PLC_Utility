@@ -28,6 +28,7 @@ public class Pallet {
     private int heightThresholdMin;
     private int heightThresholdMax;
     private int sampleDistanceFromCenter;
+    private int edgePixels = 0;
     private List<Integer> uniqueStackHeights = new ArrayList<>();
     private MeanStandardDeviation houghMeanAndStdDeviation = new MeanStandardDeviation();
     // Images
@@ -36,6 +37,7 @@ public class Pallet {
     private boolean[][] boolImage;
     private boolean[][] edgeImage;
     private int[][] houghAccumulator;
+    private List<int[][]> houghLayers;
     private RadiusAndValue[][] houghRunningAccumulator;
 
     public Pallet(String s) throws KeyValuePairException, PalletException {
@@ -341,6 +343,24 @@ public class Pallet {
 
     public Pallet setUnmatchedStacks(List<SuspectedStack> unmatchedStacks) {
         this.unmatchedStacks = unmatchedStacks;
+        return this;
+    }
+
+    public List<int[][]> getHoughLayers() {
+        return houghLayers;
+    }
+
+    public Pallet setHoughLayers(List<int[][]> houghLayers) {
+        this.houghLayers = houghLayers;
+        return this;
+    }
+
+    public int getEdgePixels() {
+        return edgePixels;
+    }
+
+    public Pallet setEdgePixels(int edgePixels) {
+        this.edgePixels = edgePixels;
         return this;
     }
 }

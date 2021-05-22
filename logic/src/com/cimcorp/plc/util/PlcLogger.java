@@ -92,7 +92,7 @@ public class PlcLogger extends ApplicationSegment {
 
                 }
             } catch (Throwable t) {
-                logger.logAndPrint(t.toString());
+                logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
             }
         }
     }

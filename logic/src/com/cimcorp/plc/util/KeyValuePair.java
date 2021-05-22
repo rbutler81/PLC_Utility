@@ -18,6 +18,11 @@ public class KeyValuePair {
         this.value = value;
     }
 
+    public KeyValuePair(String key, long value) {
+        this.key = key;
+        this.value = Long.toString(value);
+    }
+
     public KeyValuePair(String key, int value) {
         this.key = key;
         this.value = Integer.toString(value);
@@ -169,6 +174,10 @@ public class KeyValuePair {
     }
 
     public static String kVPToString(String k, int v) {
+        return new KeyValuePair(k, v).toString();
+    }
+
+    public static String kVPToString(String k, long v) {
         return new KeyValuePair(k, v).toString();
     }
 

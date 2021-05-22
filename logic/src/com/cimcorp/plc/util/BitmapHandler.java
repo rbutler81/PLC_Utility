@@ -24,7 +24,7 @@ public class BitmapHandler {
         this.bitmapsToKeep = bitmapsToKeep;
     }
 
-    public void parseLine(String s) {
+    public void parseLine(String s) throws IOException {
 
         if (s.contains("START")) {
             int lb = s.indexOf("[");
@@ -52,28 +52,17 @@ public class BitmapHandler {
             // write to disk
             Path p = Paths.get(path);
             if (!Files.exists(p)) {
-                try {
-                    Files.createDirectories(p);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                Files.createDirectories(p);
             }
 
             File file = new File(path + filename + ".bmp");
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            file.createNewFile();
+
 
             if (file.exists()) {
                 if (file.canWrite()) {
 
-                    try {
-                        ImageIO.write(img, "BMP", file);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    ImageIO.write(img, "BMP", file);
 
                     for (int i = 0; i < bitmaps.size(); i++) {
                         if (bitmaps.get(i).getFilename().equals(path + filename)) {
@@ -102,11 +91,7 @@ public class BitmapHandler {
                 Arrays.sort(bitmapFiles, Comparator.comparingLong(File::lastModified));
                 int numberOfFilesToDelete = bitmapList.size() - bitmapsToKeep;
                 for (int i = 0; i < numberOfFilesToDelete; i++) {
-                    try {
-                        bitmapFiles[i].delete();
-                    } catch(Exception e) {
-                        e.printStackTrace();
-                    }
+                    bitmapFiles[i].delete();
                 }
             }
 
