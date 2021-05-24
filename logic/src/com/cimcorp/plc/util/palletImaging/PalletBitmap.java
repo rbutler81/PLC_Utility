@@ -1,4 +1,6 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
+
+import com.cimcorp.plc.util.Clone;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -9,22 +11,36 @@ import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class PalletBitmap {
 
     private static final int STARTING_COLOUR = 0;
     private static final int LARGEST_COLOUR = 255;
-    private static final int GREEN = 0x2BFF00;
+    private static final int BLUE = 0x1919FF;
     private static final int RED = 0xFF2A00;
 
-    static void mergeLayersAndCreateBitmap(List<int[][]> layers, String filename) {
+
+    private int imagesToKeep;
+    private String path;
+    private int trackingNumber;
+
+    public PalletBitmap(int imagesToKeep, String path, int trackingNumber) {
+        this.imagesToKeep = imagesToKeep;
+        this.path = path;
+        this.trackingNumber = trackingNumber;
+    }
+
+    public void mergeLayersAndCreateBitmap(List<int[][]> layers, String filename) throws IOException {
 
         int height = layers.get(0).length;
         int width = layers.get(0)[0].length;
 
         int[][] mergedLayers = new int[height][width];
-
         for (int[][] layer: layers) {
             for (int y = 0; y < height; y++) {
                 for (int x = 0; x < width; x++) {
@@ -35,7 +51,7 @@ public class PalletBitmap {
         createBitmap(mergedLayers, filename, false);
     }
 
-    static void createBitmap(boolean[][] data, String filename) {
+    public void createBitmap(boolean[][] data, String filename) throws IOException {
 
         int height = data.length;
         int width = data[0].length;
@@ -55,7 +71,7 @@ public class PalletBitmap {
     }
 
 
-    public static void createBitmap(int[][] data, String filename, boolean monochrome) {
+    public void createBitmap(int[][] data, String filename, boolean monochrome) throws IOException {
 
         BufferedImage img = getBufferedImage(data, monochrome);
 
@@ -63,7 +79,7 @@ public class PalletBitmap {
 
     }
 
-    private static BufferedImage getBufferedImage(int[][] data, boolean monochrome) {
+    private BufferedImage getBufferedImage(int[][] data, boolean monochrome) {
         int height = data.length;
         int width = data[0].length;
         BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -76,7 +92,7 @@ public class PalletBitmap {
         return img;
     }
 
-    private static int[] flattenImageData(int height, int width, int[][] scaledData) {
+    private int[] flattenImageData(int height, int width, int[][] scaledData) {
         int[] flattenedData = new int[width * height *3];
         int ind = 0;
         for (int y = 0; y < height; y++) {
@@ -91,7 +107,7 @@ public class PalletBitmap {
         return flattenedData;
     }
 
-    private static int[][] scaleImageData(int[][] data, boolean monochrome, int height, int width) {
+    private int[][] scaleImageData(int[][] data, boolean monochrome, int height, int width) {
         // find the highest and lowest values in the input array
         int maxValue = -2147483648;
         int smallestValue = 2147483647;
@@ -121,9 +137,8 @@ public class PalletBitmap {
         return internalData;
     }
 
-    private static void writeToDisk(String filename, BufferedImage img) {
+    private void writeToDisk(String filename, BufferedImage img) throws IOException {
         // write to disk
-        String path = Paths.get(".").toAbsolutePath().normalize().toString() + "\\";
         Path p = Paths.get(path);
         if (!Files.exists(p)) {
             try {
@@ -133,7 +148,8 @@ public class PalletBitmap {
             }
         }
 
-        File file = new File(path + filename + ".png");
+        File file = getFile(filename);
+
         try {
             file.createNewFile();
         } catch (IOException e) {
@@ -143,13 +159,60 @@ public class PalletBitmap {
         if (file.exists()) {
             if (file.canWrite()) {
 
-                try {
-                    ImageIO.write(img, "png", file);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                ImageIO.write(img, "png", file);
+
             }
         }
+
+        // make a list of bmp files contained in the bitmap folder
+        File[] files = new File(path).listFiles();
+        List<File> imageList = new ArrayList<>();
+        for (int i = 0; i < files.length; i++) {
+
+            if (Pattern.compile(Pattern.quote(".png"), Pattern.CASE_INSENSITIVE).matcher(files[i].getName()).find()) {
+                imageList.add(files[i]);
+            }
+        }
+
+        // check if the number of bitmaps on the disk is greater than the configured amount - if so, delete the oldest ones first
+        if (imageList.size() > imagesToKeep) {
+
+            File[] bitmapFiles = new File[imageList.size()];
+            imageList.toArray(bitmapFiles);
+            Arrays.sort(bitmapFiles, Comparator.comparingLong(File::lastModified));
+            int numberOfFilesToDelete = imageList.size() - imagesToKeep;
+            for (int i = 0; i < numberOfFilesToDelete; i++) {
+                bitmapFiles[i].delete();
+            }
+        }
+
+    }
+
+    private File getFile(String filename) {
+
+        String originalFileName = filename;
+        filename = filename + "_" + trackingNumber + ".png";
+        File folder = new File(path);
+        String[] files = folder.list();
+
+        boolean done = false;
+        int append = 1;
+        while (!done) {
+            boolean exists = false;
+            for (String s: files) {
+                if (s.equals(filename)) {
+                    exists = true;
+                }
+            }
+            if (exists) {
+                filename = originalFileName + "_" + trackingNumber + "_" + append + ".png";
+                append = append + 1;
+            } else {
+                done = true;
+            }
+
+        }
+        return new File(path + filename);
     }
 
     private static int scaleInt(int inputMin, int inputMax, int valueToScale, int outputMin, int outputMax) {
@@ -176,7 +239,7 @@ public class PalletBitmap {
         return scaledVal;
     }
 
-    public static void drawHoughCirclesOnOriginal(Pallet p, String filename) {
+    public void drawHoughCirclesOnOriginal(Pallet p, String filename) throws IOException {
 
         int[][] originalImage = Clone.deepClone(p.getOriginalImage());
         BufferedImage img = getBufferedImage(originalImage,false);
@@ -189,7 +252,7 @@ public class PalletBitmap {
 
             if (stack.isStackMatched()) {
 
-                int drawingColour = GREEN;
+                int drawingColour = BLUE;
                 int radius = stack.getFromSuspectedStack().getPixelRadius();
                 int xMiddleOfCircle = stack.getxPixel();
                 int yMiddleOfCircle = stack.getyPixel();

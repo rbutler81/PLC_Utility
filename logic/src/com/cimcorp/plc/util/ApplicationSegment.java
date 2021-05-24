@@ -1,8 +1,10 @@
 package com.cimcorp.plc.util;
 
-import configFileUtil.Config;
-import configFileUtil.ParamRangeException;
-import logger.*;
+import com.cimcorp.configFile.Config;
+import com.cimcorp.configFile.ParamRangeException;
+import com.cimcorp.logger.LogConfig;
+import com.cimcorp.logger.Logger;
+import com.cimcorp.logger.LoggerBase;
 
 import java.io.IOException;
 

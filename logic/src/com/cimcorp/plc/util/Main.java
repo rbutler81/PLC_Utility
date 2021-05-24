@@ -1,6 +1,8 @@
 package com.cimcorp.plc.util;
 
-import configFileUtil.ParamRangeException;
+import com.cimcorp.plc.util.palletImaging.PalletImageRecognition;
+import com.cimcorp.plc.util.plcLogger.PlcLogger;
+import com.cimcorp.configFile.ParamRangeException;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -10,7 +12,7 @@ import java.util.List;
 public class Main {
 
     // setup static variables
-    static final String VER = "1.0";
+    static final String VER = "1.1";
     static final String PATH = Paths.get(".").toAbsolutePath().normalize().toString() + "\\";
     // plc logger variables
     static final String PLC_LOGGER_INI = "plclogger.ini";

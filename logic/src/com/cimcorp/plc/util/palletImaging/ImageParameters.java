@@ -1,6 +1,9 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
-import configFileUtil.*;
+import com.cimcorp.configFile.BD;
+import com.cimcorp.configFile.Config;
+import com.cimcorp.configFile.ParamRangeException;
+import com.cimcorp.plc.util.Polynomial;
 
 import java.math.BigDecimal;
 
@@ -8,6 +11,10 @@ public class ImageParameters {
 
     // communication parameters
     private int listenerPort;
+    private int remotePort;
+    private String remoteIp;
+    private int resendDelay;
+    private int resendAttempts;
     // camera parameters
     private int cameraResolution_x;
     private int cameraResolution_y;
@@ -50,6 +57,10 @@ public class ImageParameters {
     public ImageParameters(Config config) throws ParamRangeException {
 
         this.listenerPort = config.getSingleParamAsInt("ListenerPort", 1, 65535);
+        this.remotePort = config.getSingleParamAsInt("RemotePort", 1, 65535);
+        this.remoteIp = config.getSingleParamAsString("RemoteIp");
+        this.resendDelay = config.getSingleParamAsInt("ResendDelay", 50, 5000);
+        this.resendAttempts = config.getSingleParamAsInt("ResendAttempts", 0, 10);
 
         this.cameraResolution_x = config.getSingleParamAsInt("CameraResolution_x", 0);
         this.cameraResolution_y = config.getSingleParamAsInt("CameraResolution_y", 0);
@@ -229,4 +240,21 @@ public class ImageParameters {
     public int getDistanceToCenterOfFrameFromPalletOriginMM_y() {
         return distanceToCenterOfFrameFromPalletOriginMM_y;
     }
+
+    public int getRemotePort() {
+        return remotePort;
+    }
+
+    public String getRemoteIp() {
+        return remoteIp;
+    }
+
+    public int getResendDelay() {
+        return resendDelay;
+    }
+
+    public int getResendAttempts() {
+        return resendAttempts;
+    }
 }
+

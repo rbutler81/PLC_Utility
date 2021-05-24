@@ -1,4 +1,4 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -103,6 +103,35 @@ public class KeyValuePair {
         return l;
     }
 
+    public static String stringContainsKeyPairInt(String s, String key, String parseError) {
+
+        String r = parseError;
+        String searchFor = "{" + key + ":";
+        if (s.contains(searchFor)) {
+            int startsAt = s.indexOf(searchFor);
+            int colonAt = s.indexOf(":",startsAt);
+            int endBraceAt = s.indexOf("}", colonAt);
+            String value = s.substring(colonAt+1,endBraceAt);
+
+            try {
+                int valueAsInt = Integer.parseInt(value);
+                return Integer.toString(valueAsInt);
+            } catch (NumberFormatException e) {
+                return r;
+            }
+        } else {
+            return r;
+        }
+    }
+
+    public static String stringContainsString(String s, String subString, String parseError) {
+        String r = parseError;
+        if (s.contains(subString)) {
+            r = subString;
+        }
+        return r;
+    }
+
     // private static methods
 
     private static boolean findCharAt(String s, String c, int index) throws KeyValuePairException {
@@ -184,4 +213,6 @@ public class KeyValuePair {
     public static String kVPToString(String k, BigDecimal v, int scale) {
         return new KeyValuePair(k, v, scale).toString();
     }
+
+
 }

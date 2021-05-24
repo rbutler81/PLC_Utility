@@ -1,6 +1,7 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
-import threads.Message;
+import com.cimcorp.plc.util.*;
+import com.cimcorp.communications.threads.Message;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -457,7 +458,7 @@ public class ImageProcessing {
                     // quadrant 1
                     if ((distanceFromCenterMmInt_x >= 0) && (distanceFromCenterMmInt_y >= 0)) {
                         distanceFromCenterMmCorrected_x = p.getIp().getErrorCorrectionQuadrant1xCoefficients()
-                                                        .calculateForX(distanceFromCenterMm_x);
+                                .calculateForX(distanceFromCenterMm_x);
                         distanceFromCenterMmCorrected_y = p.getIp().getErrorCorrectionQuadrant1yCoefficients()
                                 .calculateForX(distanceFromCenterMm_y);
                     }
@@ -494,11 +495,11 @@ public class ImageProcessing {
                     expectedStack.setxDistanceFromCenterAdjusted_mm(distanceFromCenterMmCorrected_x);
                     expectedStack.setyDistanceFromCenterAdjusted_mm(distanceFromCenterMmCorrected_y);
                     xDistance = distanceFromCenterMmCorrected_x
-                                    .add(new BigDecimal(xCenterDistanceFromOrigin))
-                                    .setScale(0,RoundingMode.HALF_UP)
-                                    .intValue();
-                    yDistance = distanceFromCenterMmCorrected_y
                             .add(new BigDecimal(xCenterDistanceFromOrigin))
+                            .setScale(0,RoundingMode.HALF_UP)
+                            .intValue();
+                    yDistance = distanceFromCenterMmCorrected_y
+                            .add(new BigDecimal(yCenterDistanceFromOrigin))
                             .setScale(0,RoundingMode.HALF_UP)
                             .intValue();
                 } else {
@@ -516,9 +517,7 @@ public class ImageProcessing {
                 expectedStack.setyDistanceFromPalletOrigin_mm(yDistance);
 
             }
-
         }
-
     }
 
     // static methods

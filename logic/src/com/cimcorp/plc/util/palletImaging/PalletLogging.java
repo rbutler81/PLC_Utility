@@ -1,11 +1,12 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
-import logger.Logger;
+import com.cimcorp.plc.util.TaskTimer;
+import com.cimcorp.logger.Logger;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import static com.cimcorp.plc.util.KeyValuePair.kVPToString;
+import static com.cimcorp.plc.util.palletImaging.KeyValuePair.kVPToString;
 
 public class PalletLogging {
 

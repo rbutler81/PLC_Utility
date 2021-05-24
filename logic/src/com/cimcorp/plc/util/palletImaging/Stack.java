@@ -1,16 +1,16 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
 import java.math.BigDecimal;
 
 public class Stack {
 
-    private boolean stackMatched;
-    protected int stackId;
-    private int tireQty;
-    private int expectedHeight;
-    protected int measuredHeight;
-    protected int xPixel;
-    protected int yPixel;
+    private boolean stackMatched = false;
+    protected int stackId = 0;
+    private int tireQty = 0;
+    private int expectedHeight = 0;
+    protected int measuredHeight = 0;
+    protected int xPixel = 0;
+    protected int yPixel = 0;
     private BigDecimal xDistanceFromCenter_mm = BigDecimal.ZERO;
     private BigDecimal yDistanceFromCenter_mm = BigDecimal.ZERO;
     private BigDecimal xDistanceFromCenterAdjusted_mm = BigDecimal.ZERO;

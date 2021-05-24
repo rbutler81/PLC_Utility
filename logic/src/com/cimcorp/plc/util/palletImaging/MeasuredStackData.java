@@ -1,4 +1,4 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
 import java.math.BigDecimal;
 

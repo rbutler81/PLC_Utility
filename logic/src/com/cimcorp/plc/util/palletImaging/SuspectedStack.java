@@ -1,17 +1,19 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
+
+import com.cimcorp.plc.util.MeanStandardDeviation;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 public class SuspectedStack extends Stack {
 
-    private int houghValue;
-    private int pixelRadius;
+    private int houghValue = 0;
+    private int pixelRadius = 0;
     private MeanStandardDeviation msd;
-    private int successfulSamples;
-    private int samples;
+    private int successfulSamples = 0;
+    private int samples = 0;
     private BigDecimal sampleSuccessRate;
-    private int measuredDistanceFromCamera;
+    private int measuredDistanceFromCamera = 0;
 
     public SuspectedStack() {
         super();

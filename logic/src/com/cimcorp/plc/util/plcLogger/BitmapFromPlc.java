@@ -1,9 +1,9 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.plcLogger;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-public class Bitmap {
+public class BitmapFromPlc {
 
     String filename;
     int xResolution;
@@ -11,7 +11,8 @@ public class Bitmap {
     String[] line;
 
 
-    public Bitmap(String filename, int xResolution, int yResolution) {
+    public BitmapFromPlc(String filename, int xResolution, int yResolution) {
+
         this.filename = filename;
         this.xResolution = xResolution;
         this.yResolution = yResolution;

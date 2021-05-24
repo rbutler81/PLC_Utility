@@ -1,6 +1,6 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
-import threads.Message;
+import com.cimcorp.communications.threads.Message;
 
 public class HoughWorkerThread implements Runnable {
 

@@ -1,9 +1,11 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.plcLogger;
 
-import configFileUtil.ParamRangeException;
-import logger.Logger;
-import threads.Message;
-import udp.RecvBytesUdp;
+import com.cimcorp.plc.util.ApplicationSegment;
+import com.cimcorp.plc.util.ExceptionUtil;
+import com.cimcorp.configFile.ParamRangeException;
+import com.cimcorp.logger.Logger;
+import com.cimcorp.communications.threads.Message;
+import com.cimcorp.communications.udp.RecvBytesUdp;
 
 import java.io.IOException;
 
@@ -19,7 +21,7 @@ public class PlcLogger extends ApplicationSegment {
     static final String RX_ERROR_MSG = "RX_ERROR, MAL-FORMED MESSAGE: ";
 
     private Message<String> fromUdpThreadMsg = null;
-    private BitmapHandler bh;
+    private PlcBitmapHandler bh;
     private RecvBytesUdp udpServer;
     private String path;
     private String iniFileName;
@@ -45,7 +47,7 @@ public class PlcLogger extends ApplicationSegment {
 
         this.logger = new Logger(lb);
 
-        this.bh = new BitmapHandler(bitmapPath, this.bitmapsToKeep);
+        this.bh = new PlcBitmapHandler(bitmapPath, this.bitmapsToKeep);
 
     }
 

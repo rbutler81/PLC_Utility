@@ -1,6 +1,7 @@
-package com.cimcorp.plc.util;
+package com.cimcorp.plc.util.palletImaging;
 
-import configFileUtil.BD;
+import com.cimcorp.plc.util.MeanStandardDeviation;
+import com.cimcorp.configFile.BD;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -9,7 +10,7 @@ import java.util.List;
 
 public class Pallet {
 
-    private int msg;
+    private int msgId;
     private int trackingNumber;
     private int od;
     private int id;
@@ -48,7 +49,7 @@ public class Pallet {
         for (KeyValuePair k: kvp) {
 
             if (k.getKey().toLowerCase().equals("msg")) {
-                msg = k.getValueAsInteger();
+                msgId = k.getValueAsInteger();
             } else if (k.getKey().toLowerCase().equals("tn")) {
                 trackingNumber = k.getValueAsInteger();
             } else if (k.getKey().toLowerCase().equals("od")) {
@@ -62,9 +63,13 @@ public class Pallet {
                     k.getKey().toLowerCase().equals("n3") ||
                     k.getKey().toLowerCase().equals("n4") ||
                     k.getKey().toLowerCase().equals("n5")) {
-                if (k.getValueAsInteger() > 0) {
-                    expectedStacks.add(new Stack(stackId, k.getValueAsInteger()));
-                    stackId = stackId + 1;
+                if ((k.getValueAsInteger() >= 0) && (k.getValueAsInteger() <= 10)) {
+                    if (k.getValueAsInteger() > 0) {
+                        expectedStacks.add(new Stack(stackId, k.getValueAsInteger()));
+                        stackId = stackId + 1;
+                    }
+                } else {
+                    throw new PalletException(s, k.getValueAsInteger());
                 }
             } else {
                 throw new KeyValuePairException(k);
@@ -83,7 +88,7 @@ public class Pallet {
             }
         }
 
-        if ((msg > 0) && (trackingNumber > 0) && (od > 0) && (id > 0) && (sw > 0) && (expectedStackQty > 0)) {
+        if ((msgId > 0) && (trackingNumber > 0) && (od > 0) && (id > 0) && (sw > 0) && (expectedStackQty > 0)) {
         } else {
             throw new PalletException(s);
         }
@@ -151,8 +156,8 @@ public class Pallet {
         this.filteredAndCorrectedImage = filteredAndCorrectedImage;
     }
 
-    public int getMsg() {
-        return msg;
+    public int getMsgId() {
+        return msgId;
     }
 
     public int getTrackingNumber() {
@@ -361,6 +366,40 @@ public class Pallet {
 
     public Pallet setEdgePixels(int edgePixels) {
         this.edgePixels = edgePixels;
+        return this;
+    }
+
+    public String toString() {
+        String r = KeyValuePair.kVPToString("msg", getMsgId());
+        int stacksFound = 0;
+        for (int i = 1; i <= expectedStacks.size(); i++) {
+            if (expectedStacks.get(i-1).isStackMatched()) {
+                stacksFound = stacksFound + 1;
+                r = r + stackAsString(expectedStacks.get(i - 1), stacksFound);
+            }
+        }
+        if (stacksFound < 5) {
+            int stacksToBuild = 5 - stacksFound;
+            for (int i = 0; i < stacksToBuild; i ++) {
+                stacksFound = stacksFound + 1;
+                r = r + stackAsString(new Stack(), stacksFound);
+            }
+        }
+        return r;
+    }
+
+    private String stackAsString(Stack stack, int stackNumber) {
+
+        String r = "Stack0" + stackNumber
+                + KeyValuePair.kVPToString("x", stack.getxDistanceFromPalletOrigin_mm())
+                + KeyValuePair.kVPToString("y", stack.getyDistanceFromPalletOrigin_mm())
+                + KeyValuePair.kVPToString("n", stack.getTireQty())
+                + ";";
+        return r;
+    }
+
+    public Pallet setMsgId(int msgId) {
+        this.msgId = msgId;
         return this;
     }
 }
