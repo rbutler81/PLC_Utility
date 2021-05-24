@@ -165,11 +165,11 @@ public class PalletImageRecognition extends ApplicationSegment {
                     logger.logAndPrint("Saving Images...");
                     String imagePath = path + "Images\\";
                     PalletBitmap palletBitmap = new PalletBitmap(imagesToKeep, imagePath, pallet.getTrackingNumber());
-                    palletBitmap.createBitmap(pallet.getOriginalImage(), "original", false);
-                    palletBitmap.createBitmap(pallet.getBoolImage(), "filtered");
-                    palletBitmap.createBitmap(pallet.getEdgeImage(), "edge");
-                    palletBitmap.mergeLayersAndCreateBitmap(pallet.getHoughLayers(),"hough");
-                    palletBitmap.drawHoughCirclesOnOriginal(pallet, "hough_result");
+                    palletBitmap.createBitmap(pallet.getOriginalImage(), "Original", false);
+                    palletBitmap.createBitmap(pallet.getBoolImage(), "Filtered");
+                    palletBitmap.createBitmap(pallet.getEdgeImage(), "Edge");
+                    palletBitmap.mergeLayersAndCreateBitmap(pallet.getHoughLayers(),"Hough");
+                    palletBitmap.drawHoughCirclesOnOriginal(pallet, "HoughResult");
                     logger.logAndPrint("Images Saved");
                 }
 

@@ -4,8 +4,8 @@ import com.cimcorp.communications.threads.Message;
 import com.cimcorp.communications.udp.RecvBytesUdp;
 import com.cimcorp.configFile.ParamRangeException;
 import com.cimcorp.logger.Logger;
-import com.cimcorp.misc.helpers.ExceptionUtil;
 import com.cimcorp.misc.helpers.ApplicationSegment;
+import com.cimcorp.misc.helpers.ExceptionUtil;
 
 import java.io.IOException;
 
@@ -36,7 +36,7 @@ public class PlcLogger extends ApplicationSegment {
         this.name = name;
         this.path = path;
         this.iniFileName = iniFileName;
-        this.bitmapPath = path + "BMP\\";
+        this.bitmapPath = path + "ImagesFromPlc\\";
 
 
         this.port = config.getSingleParamAsInt("Port", 1, 65535);

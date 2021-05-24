@@ -27,12 +27,17 @@ public class PalletBitmap {
 
     private int imagesToKeep;
     private String path;
-    private int trackingNumber;
+    private int trackingNumber = -1;
 
     public PalletBitmap(int imagesToKeep, String path, int trackingNumber) {
         this.imagesToKeep = imagesToKeep;
         this.path = path;
         this.trackingNumber = trackingNumber;
+    }
+
+    public PalletBitmap(int imagesToKeep, String path) {
+        this.imagesToKeep = imagesToKeep;
+        this.path = path;
     }
 
     public void mergeLayersAndCreateBitmap(List<int[][]> layers, String filename) throws IOException {
@@ -137,35 +142,38 @@ public class PalletBitmap {
         return internalData;
     }
 
-    private void writeToDisk(String filename, BufferedImage img) throws IOException {
+    public void writeToDisk(String filename, BufferedImage img) throws IOException {
+
         // write to disk
         Path p = Paths.get(path);
+        writeToDiskWithPath(filename, img, p);
+
+    }
+
+    public void writeToDiskWithPath(String filename, BufferedImage img, Path p) throws IOException {
+
         if (!Files.exists(p)) {
-            try {
-                Files.createDirectories(p);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            Files.createDirectories(p);
         }
 
-        File file = getFile(filename);
-
-        try {
-            file.createNewFile();
-        } catch (IOException e) {
-            e.printStackTrace();
+        File file = null;
+        if (trackingNumber >= 1) {
+            file = getFile(filename);
+        } else {
+            String s = p.toString() + "\\" + filename + ".png";
+            file = new File(s);
         }
+
+        file.createNewFile();
 
         if (file.exists()) {
             if (file.canWrite()) {
-
                 ImageIO.write(img, "png", file);
-
             }
         }
 
         // make a list of bmp files contained in the bitmap folder
-        File[] files = new File(path).listFiles();
+        File[] files = new File(p.toString()).listFiles();
         List<File> imageList = new ArrayList<>();
         for (int i = 0; i < files.length; i++) {
 
@@ -185,7 +193,6 @@ public class PalletBitmap {
                 bitmapFiles[i].delete();
             }
         }
-
     }
 
     private File getFile(String filename) {
