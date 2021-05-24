@@ -1,5 +1,6 @@
 package com.cimcorp.plc.util;
 
+import com.cimcorp.misc.helpers.ApplicationSegment;
 import com.cimcorp.plc.util.palletImaging.PalletImageRecognition;
 import com.cimcorp.plc.util.plcLogger.PlcLogger;
 import com.cimcorp.configFile.ParamRangeException;

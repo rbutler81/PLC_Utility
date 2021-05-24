@@ -8,10 +8,10 @@ import com.cimcorp.communications.udp.UdpCommunicationParameters;
 import com.cimcorp.configFile.Config;
 import com.cimcorp.configFile.ParamRangeException;
 import com.cimcorp.logger.Logger;
-import com.cimcorp.plc.util.ApplicationSegment;
-import com.cimcorp.plc.util.Clone;
-import com.cimcorp.plc.util.ExceptionUtil;
-import com.cimcorp.plc.util.TaskTimer;
+import com.cimcorp.misc.helpers.Clone;
+import com.cimcorp.misc.helpers.ExceptionUtil;
+import com.cimcorp.misc.helpers.TaskTimer;
+import com.cimcorp.misc.helpers.ApplicationSegment;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

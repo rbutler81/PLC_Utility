@@ -1,11 +1,11 @@
 package com.cimcorp.plc.util.plcLogger;
 
-import com.cimcorp.plc.util.ApplicationSegment;
-import com.cimcorp.plc.util.ExceptionUtil;
-import com.cimcorp.configFile.ParamRangeException;
-import com.cimcorp.logger.Logger;
 import com.cimcorp.communications.threads.Message;
 import com.cimcorp.communications.udp.RecvBytesUdp;
+import com.cimcorp.configFile.ParamRangeException;
+import com.cimcorp.logger.Logger;
+import com.cimcorp.misc.helpers.ExceptionUtil;
+import com.cimcorp.misc.helpers.ApplicationSegment;
 
 import java.io.IOException;
 

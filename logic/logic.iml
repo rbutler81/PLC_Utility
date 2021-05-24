@@ -10,5 +10,6 @@
     <orderEntry type="module" module-name="Logger" />
     <orderEntry type="module" module-name="ConfigFileReader" />
     <orderEntry type="module" module-name="Comms" />
+    <orderEntry type="module" module-name="Miscellaneous" />
   </component>
 </module>

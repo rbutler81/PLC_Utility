@@ -1,6 +1,6 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.plc.util.Clone;
+import com.cimcorp.misc.helpers.Clone;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

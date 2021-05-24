@@ -1,9 +1,9 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.configFile.BD;
+import com.cimcorp.misc.math.BD;
 import com.cimcorp.configFile.Config;
 import com.cimcorp.configFile.ParamRangeException;
-import com.cimcorp.plc.util.Polynomial;
+import com.cimcorp.misc.math.Polynomial;
 
 import java.math.BigDecimal;
 

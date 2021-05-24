@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/../Helpers/Comms/Comms.iml" filepath="$PROJECT_DIR$/../Helpers/Comms/Comms.iml" />
       <module fileurl="file://$PROJECT_DIR$/../Helpers/ConfigFileReader/ConfigFileReader.iml" filepath="$PROJECT_DIR$/../Helpers/ConfigFileReader/ConfigFileReader.iml" />
       <module fileurl="file://$PROJECT_DIR$/../Helpers/Logger/Logger.iml" filepath="$PROJECT_DIR$/../Helpers/Logger/Logger.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Helpers/Miscellaneous/Miscellaneous.iml" filepath="$PROJECT_DIR$/../Helpers/Miscellaneous/Miscellaneous.iml" />
       <module fileurl="file://$PROJECT_DIR$/PLC_Utility.iml" filepath="$PROJECT_DIR$/PLC_Utility.iml" />
       <module fileurl="file://$PROJECT_DIR$/logic/logic.iml" filepath="$PROJECT_DIR$/logic/logic.iml" />
     </modules>

@@ -1,7 +1,9 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.plc.util.MeanStandardDeviation;
-import com.cimcorp.configFile.BD;
+import com.cimcorp.misc.helpers.KeyValuePair;
+import com.cimcorp.misc.helpers.KeyValuePairException;
+import com.cimcorp.misc.math.MeanStandardDeviation;
+import com.cimcorp.misc.math.BD;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;

@@ -1,6 +1,6 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.plc.util.MeanStandardDeviation;
+import com.cimcorp.misc.math.MeanStandardDeviation;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

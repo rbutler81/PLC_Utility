@@ -1,7 +1,8 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.plc.util.*;
 import com.cimcorp.communications.threads.Message;
+import com.cimcorp.misc.helpers.Clone;
+import com.cimcorp.misc.math.MeanStandardDeviation;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
