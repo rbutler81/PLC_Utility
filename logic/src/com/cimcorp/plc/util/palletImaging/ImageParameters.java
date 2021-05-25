@@ -22,6 +22,10 @@ public class ImageParameters {
     private BigDecimal cameraFactor_y;
     private int cameraPacketSizeBytes;
     private int imageDataOffsetBytes;
+    private String cameraIp;
+    private int cameraPort;
+    private int cameraTimeout;
+    private int cameraRetries;
     // algorithm parameters
     private int floorDistanceFromCamera;
     private int palletHeightFromFloor;
@@ -68,6 +72,10 @@ public class ImageParameters {
         this.cameraFactor_y = config.getSingleParamAsBigDecimal("CameraFactor_y", 0);
         this.cameraPacketSizeBytes = config.getSingleParamAsInt("CameraPacketSizeBytes", 0);
         this.imageDataOffsetBytes = config.getSingleParamAsInt("ImageDataOffsetBytes", 0);
+        this.cameraIp = config.getSingleParamAsString("CameraIp");
+        this.cameraPort = config.getSingleParamAsInt("CameraPort", 1, 65535);
+        this.cameraTimeout = config.getSingleParamAsInt("CameraTimeout", 1000, 30000);
+        this.cameraRetries = config.getSingleParamAsInt("CameraRetries", 0, 10);
 
         this.floorDistanceFromCamera = config.getSingleParamAsInt("FloorDistanceFromCamera", 0);
         this.palletHeightFromFloor = config.getSingleParamAsInt("PalletHeightFromFloor", 0);
@@ -255,6 +263,22 @@ public class ImageParameters {
 
     public int getResendAttempts() {
         return resendAttempts;
+    }
+
+    public String getCameraIp() {
+        return cameraIp;
+    }
+
+    public int getCameraPort() {
+        return cameraPort;
+    }
+
+    public int getCameraTimeout() {
+        return cameraTimeout;
+    }
+
+    public int getCameraRetries() {
+        return cameraRetries;
     }
 }
 

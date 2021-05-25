@@ -353,8 +353,9 @@ public class ImageProcessing {
                 Collections.sort(measuredStacks, (s1, s2) -> (s2.getSuccessfulSamples() - s1.getSuccessfulSamples()));
                 MeasuredStackData bestStack = measuredStacks.get(0);
                 suspectedStack.mergeMeasuredData(bestStack);
-                p.getSuspectedStacks().add(suspectedStack);
             }
+            p.getSuspectedStacks().add(suspectedStack);
+
             // determine coordinates for a square around the center point - these will be zero'd
             int xStart = suspectedStack.getxPixel() - (suspectedStack.getPixelRadius() / 2);
             int xEnd = suspectedStack.getxPixel() + (suspectedStack.getPixelRadius() / 2);
@@ -392,29 +393,31 @@ public class ImageProcessing {
         // pull tires from the suspected tire list, and check them against the ordered (by expected height) expected tire list
         // - make sure they're within the height tolerance
         int iterations = p.getSuspectedStacks().size();
-        for (int i = 0; i < iterations; i++) {
+        if (p.getExpectedStacks().size() == p.getSuspectedStacks().size() && (p.getExpectedStacks().size() > 0)) {
+            for (int i = 0; i < iterations; i++) {
 
-            SuspectedStack suspectedStack = p.getSuspectedStacks().remove(0);
-            Stack expectedStack = p.getExpectedStacks().get(i);
-            int deviation = p.getSwDeviation().setScale(0, RoundingMode.HALF_UP).intValue();
-            int acceptedSampleSuccessRate = p.getIp().getAcceptedSampleSuccessPercent();
-            int suspectedStackSampleSuccessRate = suspectedStack.getSampleSuccessRate().setScale(0, RoundingMode.HALF_UP).intValue();
+                SuspectedStack suspectedStack = p.getSuspectedStacks().remove(0);
+                Stack expectedStack = p.getExpectedStacks().get(i);
+                int deviation = p.getSwDeviation().setScale(0, RoundingMode.HALF_UP).intValue();
+                int acceptedSampleSuccessRate = p.getIp().getAcceptedSampleSuccessPercent();
+                int suspectedStackSampleSuccessRate = suspectedStack.getSampleSuccessRate().setScale(0, RoundingMode.HALF_UP).intValue();
 
-            if ((areStacksWithinDeviation(expectedStack, suspectedStack, deviation))
-                                && (suspectedStackSampleSuccessRate >= acceptedSampleSuccessRate)) {
+                if ((areStacksWithinDeviation(expectedStack, suspectedStack, deviation))
+                        && (suspectedStackSampleSuccessRate >= acceptedSampleSuccessRate)) {
 
 
-                expectedStack.setStackMatched(true);
-                expectedStack.setFromSuspectedStack(suspectedStack);
-                expectedStack.setxPixel(suspectedStack.getxPixel());
-                expectedStack.setyPixel(suspectedStack.getyPixel());
-                expectedStack.setMeasuredHeight(suspectedStack.getMeasuredHeight());
+                    expectedStack.setStackMatched(true);
+                    expectedStack.setFromSuspectedStack(suspectedStack);
+                    expectedStack.setxPixel(suspectedStack.getxPixel());
+                    expectedStack.setyPixel(suspectedStack.getyPixel());
+                    expectedStack.setMeasuredHeight(suspectedStack.getMeasuredHeight());
 
-            } else {
+                } else {
 
-                expectedStack.setStackMatched(false);
-                p.getUnmatchedStacks().add(suspectedStack);
+                    expectedStack.setStackMatched(false);
+                    p.getUnmatchedStacks().add(suspectedStack);
 
+                }
             }
         }
     }

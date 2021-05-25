@@ -286,20 +286,27 @@ public class PalletBitmap {
     }
 
     private static void drawCircleOnImage(BufferedImage img, int drawingColour, int radius, int xMiddleOfCircle, int yMiddleOfCircle) {
-        img.setRGB(xMiddleOfCircle, yMiddleOfCircle, drawingColour);
-        for (int theta = 0; theta < 360; theta++){
 
-            int xPoint = new BigDecimal(Math.cos(Math.toRadians(theta))).setScale(15,RoundingMode.HALF_UP)
-                    .multiply(new BigDecimal(radius).setScale(15,RoundingMode.HALF_UP))
-                    .add(new BigDecimal(xMiddleOfCircle))
-                    .setScale(0, RoundingMode.HALF_UP).intValue();
+        if ((xMiddleOfCircle >= 0) && (xMiddleOfCircle < img.getRaster().getWidth())
+                && (yMiddleOfCircle >= 0) && (yMiddleOfCircle < img.getRaster().getHeight())) {
+            img.setRGB(xMiddleOfCircle, yMiddleOfCircle, drawingColour);
+            for (int theta = 0; theta < 360; theta++) {
 
-            int yPoint = new BigDecimal(Math.sin(Math.toRadians(theta))).setScale(15,RoundingMode.HALF_UP)
-                    .multiply(new BigDecimal(radius).setScale(15,RoundingMode.HALF_UP))
-                    .add(new BigDecimal(yMiddleOfCircle))
-                    .setScale(0, RoundingMode.HALF_UP).intValue();
+                int xPoint = new BigDecimal(Math.cos(Math.toRadians(theta))).setScale(15, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal(radius).setScale(15, RoundingMode.HALF_UP))
+                        .add(new BigDecimal(xMiddleOfCircle))
+                        .setScale(0, RoundingMode.HALF_UP).intValue();
 
-            img.setRGB(xPoint,yPoint, drawingColour);
+                int yPoint = new BigDecimal(Math.sin(Math.toRadians(theta))).setScale(15, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal(radius).setScale(15, RoundingMode.HALF_UP))
+                        .add(new BigDecimal(yMiddleOfCircle))
+                        .setScale(0, RoundingMode.HALF_UP).intValue();
+
+
+                if ((xPoint >= 0) && (xPoint < img.getRaster().getWidth()) && (yPoint >= 0) && (yPoint < img.getRaster().getHeight())) {
+                    img.setRGB(xPoint, yPoint, drawingColour);
+                }
+            }
         }
     }
 

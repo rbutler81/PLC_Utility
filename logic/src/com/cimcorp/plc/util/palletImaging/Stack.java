@@ -24,8 +24,8 @@ public class Stack {
         tireQty = 0;
         expectedHeight = 0;
         measuredHeight = 0;
-        xPixel = -1;
-        yPixel =-1;
+        xPixel = 0;
+        yPixel = 0;
     }
 
     public Stack(int stackId, int tireQty) {

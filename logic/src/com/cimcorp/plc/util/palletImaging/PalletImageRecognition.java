@@ -1,28 +1,35 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.communications.messageHandling.KVPMessageParser;
+import com.cimcorp.communications.messageHandling.KvpMessageParser;
 import com.cimcorp.communications.messageHandling.MessageEventData;
 import com.cimcorp.communications.messageHandling.MessageHandler;
+import com.cimcorp.communications.tcp.TcpSendAndReceive;
 import com.cimcorp.communications.threads.Message;
 import com.cimcorp.communications.udp.UdpCommunicationParameters;
 import com.cimcorp.configFile.Config;
 import com.cimcorp.configFile.ParamRangeException;
 import com.cimcorp.logger.Logger;
+import com.cimcorp.misc.helpers.ApplicationSegment;
 import com.cimcorp.misc.helpers.Clone;
 import com.cimcorp.misc.helpers.ExceptionUtil;
 import com.cimcorp.misc.helpers.TaskTimer;
-import com.cimcorp.misc.helpers.ApplicationSegment;
+import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PalletImageRecognition extends ApplicationSegment {
 
     static final String LOG_FILE_NAME = "PalletImage.log";
     static final String TOP_LINE = "Pallet Image Recognition Log";
     static final boolean USE_TIMESTAMP = true;
+    static final String IFM_O3D301_CONNECTION_STRING = "1001L000000008\\r\\n1001T?\\r\\n";
     static final int THREADS_TO_USE = Runtime.getRuntime().availableProcessors();
 
     private String path;
@@ -55,23 +62,31 @@ public class PalletImageRecognition extends ApplicationSegment {
         String remoteIp = ip.getRemoteIp();
         int resendDelay = ip.getResendDelay();
         int resendAttempts = ip.getResendAttempts();
-        UdpCommunicationParameters udpParams = new UdpCommunicationParameters(localPort,
+        UdpCommunicationParameters udpToPlcParams = new UdpCommunicationParameters(localPort,
                 remotePort,
                 remoteIp,
                 resendDelay,
                 resendAttempts);
 
+        // setup message handler to / from the plc
         MessageHandler messageHandler = null;
         try {
             messageHandler = new MessageHandler(false,
                     false,
                     false,
-                    udpParams,
-                    new KVPMessageParser(),
+                    udpToPlcParams,
+                    new KvpMessageParser(),
                     lb);
         } catch (Throwable t) {
             logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
         }
+
+        // setup camera communications
+        String cameraIp = ip.getCameraIp();
+        int cameraPort = ip.getCameraPort();
+        int cameraTimeout = ip.getCameraTimeout();
+        int cameraRetries = ip.getCameraRetries();
+        boolean imageReceived = false;
 
         MessageEventData newMsg = null;
 
@@ -82,7 +97,7 @@ public class PalletImageRecognition extends ApplicationSegment {
 
             try {
 
-                // wait here until a new message arrives
+                // wait here until a new message arrives from the plc
                 messageHandler.getReceiveBufferFromRemote().waitUntilNotifiedOrListNotEmpty();
                 newMsg = messageHandler.getReceiveBufferFromRemote().getNextMsg();
 
@@ -113,18 +128,55 @@ public class PalletImageRecognition extends ApplicationSegment {
                     // log pallet details
                     logger.logAndPrint(PalletLogging.logSearchDetails(pallet));
                     PalletLogging.logExpectedStacks(pallet, logger);
+                    
+                    // connect to the camera and trigger an image
+                    TcpSendAndReceive tcpConnectToCamera = new TcpSendAndReceive(cameraIp,
+                            cameraPort,
+                            cameraTimeout,
+                            cameraRetries,
+                            lb);
 
-                    byte[] b = new byte[ip.getCameraPacketSizeBytes()];
+                    logger.logAndPrint("Requesting Image from IFM Camera...");
+                    List<Integer> bytesReceivedFromCamera = tcpConnectToCamera.send(IFM_O3D301_CONNECTION_STRING);
+                    byte[] imageBytes = new byte[ip.getCameraPacketSizeBytes()];
 
-                    pallet.setOriginalImage(ImageProcessing.convertByteArrayTo2DIntArray(b, ip.getCameraResolution_x(),
-                            ip.getCameraResolution_y(), ip.getImageDataOffsetBytes(),
+                    // if the correct amount of bytes were received from the camera
+                    if (bytesReceivedFromCamera.size() == ip.getCameraPacketSizeBytes()) {
+                        for (int i = 0; i < ip.getCameraPacketSizeBytes(); i++) {
+                            imageBytes[i] = new Integer(bytesReceivedFromCamera.get(i)).byteValue();
+                        }
+
+                        logger.logAndPrint("Image from IFM Camera Received");
+                        imageReceived = true;
+
+                    } else {
+
+                        logger.logAndPrint("Incorrect byte count from IFM camera. Expected: "
+                                + ip.getCameraPacketSizeBytes()
+                                + " Received: "
+                                + bytesReceivedFromCamera.size());
+
+                        for (int i = 0; i < ip.getCameraPacketSizeBytes(); i++) {
+                            imageBytes[i] = -1;
+                        }
+                    }
+
+                    // start a timer to measure the image algorithm
+                    TaskTimer palletImaging = new TaskTimer(("Pallet Imaging"));
+
+                    // load camera data from hex data that's been saved to a text file -- for testing
+                    //byte[] imageBytes = readCameraPacketFromFile("CameraPacket.txt");
+                    // load camera data from a saved bitmap -- for testing
+                    // fakeCameraPhoto(pallet, "tires.bmp");
+
+                    pallet.setOriginalImage(ImageProcessing.convertByteArrayTo2DIntArray(imageBytes,
+                            ip.getCameraResolution_x(),
+                            ip.getCameraResolution_y(),
+                            ip.getImageDataOffsetBytes(),
                             ip.isFlipImageHorizontally()));
-
-                    fakeCameraPhoto(pallet);
 
                     logger.logAndPrint("1D -> 2D Mapping Done");
 
-                    TaskTimer palletImaging = new TaskTimer(("Pallet Imaging"));
                     pallet.setFilteredAndCorrectedImage(Clone.deepClone(pallet.getOriginalImage()));
 
                     // filter the original image and flatten it in a boolean image
@@ -162,21 +214,57 @@ public class PalletImageRecognition extends ApplicationSegment {
                     messageHandler.sendMessage(pallet.toString(), msgId);
 
                     // saving images
-                    logger.logAndPrint("Saving Images...");
-                    String imagePath = path + "Images\\";
-                    PalletBitmap palletBitmap = new PalletBitmap(imagesToKeep, imagePath, pallet.getTrackingNumber());
-                    palletBitmap.createBitmap(pallet.getOriginalImage(), "Original", false);
-                    palletBitmap.createBitmap(pallet.getBoolImage(), "Filtered");
-                    palletBitmap.createBitmap(pallet.getEdgeImage(), "Edge");
-                    palletBitmap.mergeLayersAndCreateBitmap(pallet.getHoughLayers(),"Hough");
-                    palletBitmap.drawHoughCirclesOnOriginal(pallet, "HoughResult");
-                    logger.logAndPrint("Images Saved");
+                    if (imageReceived) {
+                        logger.logAndPrint("Saving Images...");
+                        String imagePath = path + "Images\\";
+                        PalletBitmap palletBitmap = new PalletBitmap(imagesToKeep, imagePath, pallet.getTrackingNumber());
+                        palletBitmap.createBitmap(pallet.getOriginalImage(), "Original", false);
+                        palletBitmap.createBitmap(pallet.getBoolImage(), "Filtered");
+                        palletBitmap.createBitmap(pallet.getEdgeImage(), "Edge");
+                        palletBitmap.mergeLayersAndCreateBitmap(pallet.getHoughLayers(), "Hough");
+                        palletBitmap.drawHoughCirclesOnOriginal(pallet, "HoughResult");
+                        logger.logAndPrint("Images Saved");
+                    }
                 }
 
             } catch (Throwable t) {
                 logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
             }
         }
+    }
+
+    private byte[] readCameraPacketFromFile(String filename) {
+
+        String cameraPacketString = "";
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(filename));
+
+            cameraPacketString = br.readLine();
+
+            String line = "";
+            while (line != null) {
+                line = br.readLine();
+                if (line != null) {
+                    cameraPacketString = cameraPacketString + line;
+                }
+            }
+            } catch (Throwable t) {
+
+            }
+
+        String[] hexArray = cameraPacketString.split(" ");
+        List<byte[]> bytes = new ArrayList<>();
+        for (String s: hexArray) {
+            bytes.add(HexBin.decode(s));
+        }
+
+        byte[] r = new byte[bytes.size()];
+        for (int i = 0; i < bytes.size(); i++) {
+            r[i] = bytes.get(i)[0];
+        }
+
+        return r;
     }
 
     private int determineMsgId(MessageHandler messageHandler, Pallet pallet) {
@@ -202,10 +290,10 @@ public class PalletImageRecognition extends ApplicationSegment {
         return r;
     }
 
-    private void fakeCameraPhoto(Pallet pallet) {
+    private void fakeCameraPhoto(Pallet pallet, String filename) {
         BufferedImage img = null;
         try {
-            img = ImageIO.read(new File("tires.bmp"));
+            img = ImageIO.read(new File(filename));
         } catch (IOException e) {
         }
 
