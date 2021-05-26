@@ -22,6 +22,7 @@ public class Pallet {
     private List<Stack> expectedStacks = new ArrayList<>();
     private List<SuspectedStack> suspectedStacks= new ArrayList<>();
     private List<SuspectedStack> unmatchedStacks = new ArrayList<>();
+    private PalletAlarm alarm = PalletAlarm.NO_ALARM;
     // algorithm parameters
     private ImageParameters ip;
     private BigDecimal odRadius;
@@ -372,7 +373,8 @@ public class Pallet {
     }
 
     public String toString() {
-        String r = KeyValuePair.kVPToString("msg", getMsgId());
+        String r = KeyValuePair.kVPToString("msg", getMsgId())
+                + KeyValuePair.kVPToString("Alarm", getAlarm().toString());
         int stacksFound = 0;
         for (int i = 1; i <= expectedStacks.size(); i++) {
             if (expectedStacks.get(i-1).isStackMatched()) {
@@ -396,12 +398,22 @@ public class Pallet {
                 + KeyValuePair.kVPToString("x", stack.getxDistanceFromPalletOrigin_mm())
                 + KeyValuePair.kVPToString("y", stack.getyDistanceFromPalletOrigin_mm())
                 + KeyValuePair.kVPToString("n", stack.getTireQty())
+                + KeyValuePair.kVPToString("h", stack.getMeasuredHeight())
                 + ";";
         return r;
     }
 
     public Pallet setMsgId(int msgId) {
         this.msgId = msgId;
+        return this;
+    }
+
+    public PalletAlarm getAlarm() {
+        return alarm;
+    }
+
+    public Pallet setAlarm(PalletAlarm alarm) {
+        this.alarm = alarm;
         return this;
     }
 }

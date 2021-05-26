@@ -62,6 +62,7 @@ public class PalletImageRecognition extends ApplicationSegment {
         String remoteIp = ip.getRemoteIp();
         int resendDelay = ip.getResendDelay();
         int resendAttempts = ip.getResendAttempts();
+
         UdpCommunicationParameters udpToPlcParams = new UdpCommunicationParameters(localPort,
                 remotePort,
                 remoteIp,
@@ -71,10 +72,7 @@ public class PalletImageRecognition extends ApplicationSegment {
         // setup message handler to / from the plc
         MessageHandler messageHandler = null;
         try {
-            messageHandler = new MessageHandler(false,
-                    false,
-                    false,
-                    udpToPlcParams,
+            messageHandler = new MessageHandler(udpToPlcParams,
                     new KvpMessageParser(),
                     lb);
         } catch (Throwable t) {
@@ -134,7 +132,8 @@ public class PalletImageRecognition extends ApplicationSegment {
                             cameraPort,
                             cameraTimeout,
                             cameraRetries,
-                            lb);
+                            lb,
+                            "Tcp_IFM_Camera");
 
                     logger.logAndPrint("Requesting Image from IFM Camera...");
                     List<Integer> bytesReceivedFromCamera = tcpConnectToCamera.send(IFM_O3D301_CONNECTION_STRING);
@@ -153,65 +152,73 @@ public class PalletImageRecognition extends ApplicationSegment {
 
                         logger.logAndPrint("Incorrect byte count from IFM camera. Expected: "
                                 + ip.getCameraPacketSizeBytes()
-                                + " Received: "
+                                + " - Received: "
                                 + bytesReceivedFromCamera.size());
 
                         for (int i = 0; i < ip.getCameraPacketSizeBytes(); i++) {
                             imageBytes[i] = -1;
                         }
+
+                        pallet.setAlarm(PalletAlarm.CAMERA_TIMEOUT);
+
                     }
 
-                    // start a timer to measure the image algorithm
-                    TaskTimer palletImaging = new TaskTimer(("Pallet Imaging"));
+                    // if an image wasn't received, skip over the image algorithm
+                    if (imageReceived) {
 
-                    // load camera data from hex data that's been saved to a text file -- for testing
-                    //byte[] imageBytes = readCameraPacketFromFile("CameraPacket.txt");
-                    // load camera data from a saved bitmap -- for testing
-                    // fakeCameraPhoto(pallet, "tires.bmp");
+                        // start a timer to measure the image algorithm
+                        TaskTimer palletImaging = new TaskTimer(("Pallet Imaging"));
 
-                    pallet.setOriginalImage(ImageProcessing.convertByteArrayTo2DIntArray(imageBytes,
-                            ip.getCameraResolution_x(),
-                            ip.getCameraResolution_y(),
-                            ip.getImageDataOffsetBytes(),
-                            ip.isFlipImageHorizontally()));
+                        // load camera data from hex data that's been saved to a text file -- for testing
+                        //byte[] imageBytes = readCameraPacketFromFile("CameraPacket.txt");
+                        // load camera data from a saved bitmap -- for testing
+                        // fakeCameraPhoto(pallet, "tires.bmp");
 
-                    logger.logAndPrint("1D -> 2D Mapping Done");
+                        pallet.setOriginalImage(ImageProcessing.convertByteArrayTo2DIntArray(imageBytes,
+                                ip.getCameraResolution_x(),
+                                ip.getCameraResolution_y(),
+                                ip.getImageDataOffsetBytes(),
+                                ip.isFlipImageHorizontally()));
 
-                    pallet.setFilteredAndCorrectedImage(Clone.deepClone(pallet.getOriginalImage()));
+                        logger.logAndPrint("1D -> 2D Mapping Done");
 
-                    // filter the original image and flatten it in a boolean image
-                    ImageProcessing.filterImageAndConvertToBoolArray(pallet);
-                    logger.logAndPrint("Image Filtering Done");
+                        pallet.setFilteredAndCorrectedImage(Clone.deepClone(pallet.getOriginalImage()));
 
-                    // detect edges in the filtered image
-                    ImageProcessing.edgeDetection(pallet);
-                    logger.logAndPrint("Edge Detection Done");
+                        // filter the original image and flatten it in a boolean image
+                        ImageProcessing.filterImageAndConvertToBoolArray(pallet);
+                        logger.logAndPrint("Image Filtering Done");
 
-                    // run the hough transform
-                    ImageProcessing.parallelHoughTransform(pallet, THREADS_TO_USE);
-                    logger.logAndPrint("Hough Transform Done");
+                        // detect edges in the filtered image
+                        ImageProcessing.edgeDetection(pallet);
+                        logger.logAndPrint("Edge Detection Done");
 
-                    // look for stacks from the hough data
-                    ImageProcessing.findStacks(pallet);
-                    logger.logAndPrint("Finding Stacks Done");
-                    PalletLogging.logSuspectedStacks(pallet, logger);
+                        // run the hough transform
+                        ImageProcessing.parallelHoughTransform(pallet, THREADS_TO_USE);
+                        logger.logAndPrint("Hough Transform Done");
 
-                    // match the suspected stacks to the expected stacks
-                    ImageProcessing.matchStacks(pallet);
-                    logger.logAndPrint("Matching Stacks Done");
-                    PalletLogging.logMatchedStacks(pallet, logger);
-                    PalletLogging.logUnMatchedStacks(pallet, logger);
+                        // look for stacks from the hough data
+                        ImageProcessing.findStacks(pallet);
+                        logger.logAndPrint("Finding Stacks Done");
+                        PalletLogging.logSuspectedStacks(pallet, logger);
 
-                    // calculate the actual stack positions with respect to the pallet
-                    ImageProcessing.calculateRealStackPositions(pallet);
-                    logger.logAndPrint("Calculated Stack Positions");
-                    PalletLogging.logFinalStacks(pallet, logger);
-                    PalletLogging.algoStats(pallet, THREADS_TO_USE, palletImaging, logger);
+                        // match the suspected stacks to the expected stacks
+                        ImageProcessing.matchStacks(pallet);
+                        logger.logAndPrint("Matching Stacks Done");
+                        PalletLogging.logMatchedStacks(pallet, logger);
+                        PalletLogging.logUnMatchedStacks(pallet, logger);
+
+                        // calculate the actual stack positions with respect to the pallet
+                        ImageProcessing.calculateRealStackPositions(pallet);
+                        logger.logAndPrint("Calculated Stack Positions");
+                        PalletLogging.logFinalStacks(pallet, logger);
+                        PalletLogging.algoStats(pallet, THREADS_TO_USE, palletImaging, logger);
+                    }
 
                     // send the response message -- check the ACK queue for messages with the same message id
                     int msgId = determineMsgId(messageHandler, pallet);
                     pallet.setMsgId(msgId);
                     messageHandler.sendMessage(pallet.toString(), msgId);
+
 
                     // saving images
                     if (imageReceived) {
