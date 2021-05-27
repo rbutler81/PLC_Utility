@@ -43,6 +43,7 @@ public class Main {
                     appSegments.add(new PalletImageRecognition(PATH, PALLET_IMAGE_INI, PALLET_IMAGE_NAME));
                 } catch (IOException | ParamRangeException e) {
                     e.printStackTrace();
+                    System.exit(1);
                 }
             }
         }

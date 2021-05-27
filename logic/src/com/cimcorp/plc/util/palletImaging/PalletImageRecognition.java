@@ -55,6 +55,7 @@ public class PalletImageRecognition extends ApplicationSegment {
     public void run() {
 
         logger.logAndPrint("Application Started -- Image Processing Enabled and Running");
+        logger.logAndPrint(THREADS_TO_USE + " Available Threads");
 
         // get communication parameters
         int localPort = ip.getListenerPort();
