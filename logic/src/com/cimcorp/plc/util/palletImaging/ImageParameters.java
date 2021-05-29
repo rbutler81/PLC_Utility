@@ -1,6 +1,6 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.misc.math.BD;
+import com.cimcorp.misc.math.BigDecimalMath;
 import com.cimcorp.configFile.Config;
 import com.cimcorp.configFile.ParamRangeException;
 import com.cimcorp.misc.math.Polynomial;
@@ -112,8 +112,8 @@ public class ImageParameters {
         coefficients = config.getParam("ErrorCorrectionQuadrant4yCoefficients").toArray(new String[0]);
         this.errorCorrectionQuadrant4yCoefficients = new Polynomial(coefficients,15);
 
-        this.houghThetaIncrement = BD.divide(360, houghCirclePoints);
-        this.sampleThetaIncrement = BD.divide(360, tireSamplePoints);
+        this.houghThetaIncrement = BigDecimalMath.divide(360, houghCirclePoints);
+        this.sampleThetaIncrement = BigDecimalMath.divide(360, tireSamplePoints);
 
     }
 

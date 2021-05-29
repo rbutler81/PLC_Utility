@@ -3,7 +3,7 @@ package com.cimcorp.plc.util.palletImaging;
 import com.cimcorp.misc.helpers.KeyValuePair;
 import com.cimcorp.misc.helpers.KeyValuePairException;
 import com.cimcorp.misc.math.MeanStandardDeviation;
-import com.cimcorp.misc.math.BD;
+import com.cimcorp.misc.math.BigDecimalMath;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -101,8 +101,8 @@ public class Pallet {
 
         this.ip = ip;
 
-        odRadius = BD.divide(od,2,1);
-        swDeviation = BD.multiply(sw, ip.getSearchForRadiusDeviation());
+        odRadius = BigDecimalMath.divide(od,2,1);
+        swDeviation = BigDecimalMath.multiply(sw, ip.getSearchForRadiusDeviation());
         sampleDistanceFromCenter = ((od / 2) + (id / 2)) / 2;
 
         if (allStacksSameHeight) {
@@ -111,17 +111,17 @@ public class Pallet {
                                             - expectedStacks.get(0).getExpectedHeight();
 
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm + rDeviation_mm);
-            BigDecimal numerator = BD.multiply(odRadius, ip.getCameraFactor_x());
-            BigDecimal denominator = BD.add(stackDistanceFromCamera, swDeviation);
-            fromRadiusPixels = BD.divide(numerator, denominator, 0) - ip.getToFromPixelSearchAdjust();
+            BigDecimal numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
+            BigDecimal denominator = BigDecimalMath.add(stackDistanceFromCamera, swDeviation);
+            fromRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) - ip.getToFromPixelSearchAdjust();
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm - rDeviation_mm);
-            numerator = BD.multiply(odRadius, ip.getCameraFactor_x());
-            denominator = BD.subtract(stackDistanceFromCamera, swDeviation);
-            toRadiusPixels = BD.divide(numerator, denominator, 0) + ip.getToFromPixelSearchAdjust();
+            numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
+            denominator = BigDecimalMath.subtract(stackDistanceFromCamera, swDeviation);
+            toRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) + ip.getToFromPixelSearchAdjust();
 
             // calculate heights to filter out of the 3d image data
-            heightThresholdMin = BD.subtract(stackDistanceFromCamera, swDeviation, 0);
-            heightThresholdMax = BD.add(stackDistanceFromCamera, swDeviation, 0);
+            heightThresholdMin = BigDecimalMath.subtract(stackDistanceFromCamera, swDeviation, 0);
+            heightThresholdMax = BigDecimalMath.add(stackDistanceFromCamera, swDeviation, 0);
 
         } else {
 
@@ -134,17 +134,17 @@ public class Pallet {
                     - expectedStacks.get(0).getExpectedHeight();
 
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm + rDeviation_mm);
-            BigDecimal numerator = BD.multiply(odRadius, ip.getCameraFactor_x());
-            BigDecimal denominator = BD.add(stackDistanceFromCameraMax, swDeviation);
-            fromRadiusPixels = BD.divide(numerator, denominator, 0) - ip.getToFromPixelSearchAdjust();
+            BigDecimal numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
+            BigDecimal denominator = BigDecimalMath.add(stackDistanceFromCameraMax, swDeviation);
+            fromRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) - ip.getToFromPixelSearchAdjust();
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm - rDeviation_mm);
-            numerator = BD.multiply(odRadius, ip.getCameraFactor_x());
-            denominator = BD.subtract(stackDistanceFromCameraMin, swDeviation);
-            toRadiusPixels = BD.divide(numerator, denominator, 0) + ip.getToFromPixelSearchAdjust();
+            numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
+            denominator = BigDecimalMath.subtract(stackDistanceFromCameraMin, swDeviation);
+            toRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) + ip.getToFromPixelSearchAdjust();
 
             // calculate heights to filter out of the 3d image data
-            heightThresholdMin = BD.subtract(stackDistanceFromCameraMin, swDeviation, 0);
-            heightThresholdMax = BD.add(stackDistanceFromCameraMax, swDeviation, 0);
+            heightThresholdMin = BigDecimalMath.subtract(stackDistanceFromCameraMin, swDeviation, 0);
+            heightThresholdMax = BigDecimalMath.add(stackDistanceFromCameraMax, swDeviation, 0);
 
         }
 

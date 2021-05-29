@@ -4,7 +4,6 @@ import com.cimcorp.communications.messageHandling.KvpMessageParser;
 import com.cimcorp.communications.messageHandling.MessageEventData;
 import com.cimcorp.communications.messageHandling.MessageHandler;
 import com.cimcorp.communications.tcp.TcpSendAndReceive;
-import com.cimcorp.communications.threads.Message;
 import com.cimcorp.communications.udp.UdpCommunicationParameters;
 import com.cimcorp.configFile.Config;
 import com.cimcorp.configFile.ParamRangeException;
@@ -28,6 +27,7 @@ public class PalletImageRecognition extends ApplicationSegment {
 
     static final String LOG_FILE_NAME = "PalletImage.log";
     static final String TOP_LINE = "Pallet Image Recognition Log";
+    static final String IMAGE_PATH = "Images\\";
     static final boolean USE_TIMESTAMP = true;
     static final String IFM_O3D301_CONNECTION_STRING = "1001L000000008\\r\\n1001T?\\r\\n";
     static final int THREADS_TO_USE = Runtime.getRuntime().availableProcessors();
@@ -49,13 +49,15 @@ public class PalletImageRecognition extends ApplicationSegment {
         this.logger = new Logger(lb, "ImageProcessing");
         this.ip = new ImageParameters(config);
 
+
+
     }
 
     @Override
     public void run() {
 
         logger.logAndPrint("Application Started -- Image Processing Enabled and Running");
-        logger.logAndPrint(THREADS_TO_USE + " Available Threads");
+        logger.logAndPrint("Using " + THREADS_TO_USE + " Available CPU Cores");
 
         // get communication parameters
         int localPort = ip.getListenerPort();
@@ -213,10 +215,11 @@ public class PalletImageRecognition extends ApplicationSegment {
                         logger.logAndPrint("Calculated Stack Positions");
                         PalletLogging.logFinalStacks(pallet, logger);
                         PalletLogging.algoStats(pallet, THREADS_TO_USE, palletImaging, logger);
+
                     }
 
                     // send the response message -- check the ACK queue for messages with the same message id
-                    int msgId = determineMsgId(messageHandler, pallet);
+                    int msgId = messageHandler.determineNextMsgId(pallet.getMsgId());
                     pallet.setMsgId(msgId);
                     messageHandler.sendMessage(pallet.toString(), msgId);
 
@@ -224,7 +227,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                     // saving images
                     if (imageReceived) {
                         logger.logAndPrint("Saving Images...");
-                        String imagePath = path + "Images\\";
+                        String imagePath = path + IMAGE_PATH;
                         PalletBitmap palletBitmap = new PalletBitmap(imagesToKeep, imagePath, pallet.getTrackingNumber());
                         palletBitmap.createBitmap(pallet.getOriginalImage(), "Original", false);
                         palletBitmap.createBitmap(pallet.getBoolImage(), "Filtered");
@@ -272,29 +275,6 @@ public class PalletImageRecognition extends ApplicationSegment {
             r[i] = bytes.get(i)[0];
         }
 
-        return r;
-    }
-
-    private int determineMsgId(MessageHandler messageHandler, Pallet pallet) {
-        int r = 0;
-        int listSize = messageHandler.getMessagesWaitingForAck().size();
-        Message<MessageEventData> unlocked = messageHandler.getMessagesWaitingForAck().lock();
-        int proposedMsgId = pallet.getMsgId() + 1;
-        boolean done = false;
-        while (!done) {
-            boolean exists = false;
-            for (int i = 0; i < listSize; i++) {
-                if (proposedMsgId == unlocked.getListWithoutLocking().get(i).getMsgId()){
-                    exists = true;
-                    proposedMsgId = proposedMsgId + 1;
-                }
-            }
-            if (!exists) {
-                done = true;
-                r = proposedMsgId;
-            }
-        }
-        messageHandler.getMessagesWaitingForAck().unlock();
         return r;
     }
 
