@@ -9,6 +9,8 @@ import com.cimcorp.misc.helpers.ExceptionUtil;
 
 import java.io.IOException;
 
+import static com.cimcorp.plc.util.Main.PATH_SEPARATOR;
+
 public class PlcLogger extends ApplicationSegment {
 
     static final String LOG_FILE_NAME = "PLC.log";
@@ -36,7 +38,7 @@ public class PlcLogger extends ApplicationSegment {
         this.name = name;
         this.path = path;
         this.iniFileName = iniFileName;
-        this.bitmapPath = path + "ImagesFromPlc\\";
+        this.bitmapPath = path + "ImagesFromPlc" + PATH_SEPARATOR;
 
 
         this.port = config.getSingleParamAsInt("Port", 1, 65535);

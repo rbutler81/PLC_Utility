@@ -23,11 +23,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.cimcorp.plc.util.Main.PATH_SEPARATOR;
+
 public class PalletImageRecognition extends ApplicationSegment {
 
     static final String LOG_FILE_NAME = "PalletImage.log";
     static final String TOP_LINE = "Pallet Image Recognition Log";
-    static final String IMAGE_PATH = "Images\\";
+    static final String IMAGE_PATH = "Images" + PATH_SEPARATOR;
     static final boolean USE_TIMESTAMP = true;
     static final String IFM_O3D301_CONNECTION_STRING = "1001L000000008\\r\\n1001T?\\r\\n";
     static final int THREADS_TO_USE = Runtime.getRuntime().availableProcessors();
@@ -48,8 +50,6 @@ public class PalletImageRecognition extends ApplicationSegment {
 
         this.logger = new Logger(lb, "ImageProcessing");
         this.ip = new ImageParameters(config);
-
-
 
     }
 

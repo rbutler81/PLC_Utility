@@ -1,10 +1,11 @@
 package com.cimcorp.plc.util;
 
+import com.cimcorp.configFile.ParamRangeException;
 import com.cimcorp.misc.helpers.ApplicationSegment;
 import com.cimcorp.plc.util.palletImaging.PalletImageRecognition;
 import com.cimcorp.plc.util.plcLogger.PlcLogger;
-import com.cimcorp.configFile.ParamRangeException;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -14,7 +15,9 @@ public class Main {
 
     // setup static variables
     static final String VER = "1.1";
-    static final String PATH = Paths.get(".").toAbsolutePath().normalize().toString() + "\\";
+    public static final String PATH_SEPARATOR = File.separator;
+    static final String PATH = Paths.get(".").toAbsolutePath().normalize().toString() + PATH_SEPARATOR;
+
     // plc logger variables
     static final String PLC_LOGGER_INI = "plclogger.ini";
     static final String PLC_LOGGER_NAME = "PLC Logger";
