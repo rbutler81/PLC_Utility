@@ -37,6 +37,7 @@ public class ImageParameters {
     private int acceptedSampleSuccessPercent;
     private int distanceToCenterOfFrameFromPalletOriginMM_x;
     private int distanceToCenterOfFrameFromPalletOriginMM_y;
+    private int threadsToUse;
     // error correction parameters
     private boolean errorCorrectionAverageMissingDataEnabled;
     private int errorCorrectionBlockSize;
@@ -87,6 +88,7 @@ public class ImageParameters {
         this.acceptedSampleSuccessPercent = config.getSingleParamAsInt("AcceptedSampleSuccessPercent", 1, 100);
         this.distanceToCenterOfFrameFromPalletOriginMM_x = config.getSingleParamAsInt("DistanceToCenterOfFrameFromPalletOriginMM_x");
         this.distanceToCenterOfFrameFromPalletOriginMM_y = config.getSingleParamAsInt("DistanceToCenterOfFrameFromPalletOriginMM_y");
+        this.threadsToUse = config.getSingleParamAsInt("ThreadsToUse", 1, 99);
 
         this.errorCorrectionAverageMissingDataEnabled = config.getSingleParamAsBool("ErrorCorrectionAverageMissingDataEnabled");
         this.errorCorrectionBlockSize = config.getSingleParamAsInt("ErrorCorrectionBlockSize", 3, 10);
@@ -279,6 +281,10 @@ public class ImageParameters {
 
     public int getCameraRetries() {
         return cameraRetries;
+    }
+
+    public int getThreadsToUse() {
+        return threadsToUse;
     }
 }
 

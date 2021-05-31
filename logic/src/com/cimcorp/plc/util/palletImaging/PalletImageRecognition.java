@@ -31,13 +31,13 @@ public class PalletImageRecognition extends ApplicationSegment {
     static final String TOP_LINE = "Pallet Image Recognition Log";
     static final String IMAGE_PATH = "Images" + PATH_SEPARATOR;
     static final boolean USE_TIMESTAMP = true;
-    static final String IFM_O3D301_CONNECTION_STRING = "1001L000000008\\r\\n1001T?\\r\\n";
-    static final int THREADS_TO_USE = Runtime.getRuntime().availableProcessors();
+    static final String IFM_O3D301_CONNECTION_STRING = "1001L000000008\r\n1001T?\r\n";
 
     private String path;
     private String iniFileName;
     private ImageParameters ip;
     private int imagesToKeep;
+    private int threadsToUse;
 
     public PalletImageRecognition(String path, String iniFileName, String name) throws IOException, ParamRangeException {
 
@@ -51,13 +51,19 @@ public class PalletImageRecognition extends ApplicationSegment {
         this.logger = new Logger(lb, "ImageProcessing");
         this.ip = new ImageParameters(config);
 
+        if (this.ip.getThreadsToUse() == 99) {
+            threadsToUse = Runtime.getRuntime().availableProcessors();
+        } else {
+            threadsToUse = this.ip.getThreadsToUse();
+        }
+
     }
 
     @Override
     public void run() {
 
         logger.logAndPrint("Application Started -- Image Processing Enabled and Running");
-        logger.logAndPrint("Using " + THREADS_TO_USE + " Available CPU Cores");
+        logger.logAndPrint("Using " + threadsToUse + " Available CPU Cores");
 
         // get communication parameters
         int localPort = ip.getListenerPort();
@@ -139,7 +145,8 @@ public class PalletImageRecognition extends ApplicationSegment {
                             "Tcp_IFM_Camera");
 
                     logger.logAndPrint("Requesting Image from IFM Camera...");
-                    List<Integer> bytesReceivedFromCamera = tcpConnectToCamera.send(IFM_O3D301_CONNECTION_STRING);
+                    List<Integer> bytesReceivedFromCamera = tcpConnectToCamera.send(IFM_O3D301_CONNECTION_STRING,
+                            ip.getCameraPacketSizeBytes());
                     byte[] imageBytes = new byte[ip.getCameraPacketSizeBytes()];
 
                     // if the correct amount of bytes were received from the camera
@@ -196,7 +203,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                         logger.logAndPrint("Edge Detection Done");
 
                         // run the hough transform
-                        ImageProcessing.parallelHoughTransform(pallet, THREADS_TO_USE);
+                        ImageProcessing.parallelHoughTransform(pallet, threadsToUse);
                         logger.logAndPrint("Hough Transform Done");
 
                         // look for stacks from the hough data
@@ -214,7 +221,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                         ImageProcessing.calculateRealStackPositions(pallet);
                         logger.logAndPrint("Calculated Stack Positions");
                         PalletLogging.logFinalStacks(pallet, logger);
-                        PalletLogging.algoStats(pallet, THREADS_TO_USE, palletImaging, logger);
+                        PalletLogging.algoStats(pallet, threadsToUse, palletImaging, logger);
 
                     }
 
