@@ -175,7 +175,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                         // load camera data from hex data that's been saved to a text file -- for testing
                         //byte[] imageBytes = readCameraPacketFromFile("CameraPacket.txt");
                         // load camera data from a saved bitmap -- for testing
-                        // fakeCameraPhoto(pallet, "tires.bmp");
+                        //fakeCameraPhoto(pallet, "tires.png");
 
                         pallet.setOriginalImage(ImageProcessing.convertByteArrayTo2DIntArray(imageBytes,
                                 ip.getCameraResolution_x(),
@@ -291,7 +291,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                 if (value == -1) {
                     pallet.getOriginalImage()[y][x] = 1;
                 } else {
-                    pallet.getOriginalImage()[y][x] = 4000;
+                    pallet.getOriginalImage()[y][x] = 3460;
                 }
             }
         }

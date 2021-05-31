@@ -40,7 +40,6 @@ public class PlcLogger extends ApplicationSegment {
         this.iniFileName = iniFileName;
         this.bitmapPath = path + "ImagesFromPlc" + PATH_SEPARATOR;
 
-
         this.port = config.getSingleParamAsInt("Port", 1, 65535);
         this.bitmapsToKeep = config.getSingleParamAsInt("BitmapsToKeep", 1);
 
