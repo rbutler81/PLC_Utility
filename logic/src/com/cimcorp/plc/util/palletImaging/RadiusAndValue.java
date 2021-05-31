@@ -1,9 +1,12 @@
 package com.cimcorp.plc.util.palletImaging;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 public class RadiusAndValue {
 
     private int radius;
     private int value;
+    private ReentrantLock lock = new ReentrantLock(true);
 
     public RadiusAndValue() {
         this.radius = 0;
@@ -16,20 +19,34 @@ public class RadiusAndValue {
     }
 
     public int getRadius() {
-        return radius;
+        while (lock.isLocked()) {}
+        lock.lock();
+        int radiusToReturn = radius;
+        lock.unlock();
+        return radiusToReturn;
     }
 
     public int getValue() {
-        return value;
+        while (lock.isLocked()) {}
+        lock.lock();
+        int valueToReturn = value;
+        lock.unlock();
+        return valueToReturn;
     }
 
     public RadiusAndValue setRadius(int radius) {
+        while (lock.isLocked()) {}
+        lock.lock();
         this.radius = radius;
+        lock.unlock();
         return this;
     }
 
     public RadiusAndValue setValue(int value) {
+        while (lock.isLocked()) {}
+        lock.lock();
         this.value = value;
+        lock.unlock();
         return this;
     }
 

@@ -31,6 +31,7 @@ public class PalletImageRecognition extends ApplicationSegment {
     static final String TOP_LINE = "Pallet Image Recognition Log";
     static final String IMAGE_PATH = "Images" + PATH_SEPARATOR;
     static final boolean USE_TIMESTAMP = true;
+    static final int USE_PHYSICAL_MACHINE_CORES_MAX = 99;
     static final String IFM_O3D301_CONNECTION_STRING = "1001L000000008\r\n1001T?\r\n";
 
     private String path;
@@ -51,7 +52,7 @@ public class PalletImageRecognition extends ApplicationSegment {
         this.logger = new Logger(lb, "ImageProcessing");
         this.ip = new ImageParameters(config);
 
-        if (this.ip.getThreadsToUse() == 99) {
+        if (this.ip.getThreadsToUse() == USE_PHYSICAL_MACHINE_CORES_MAX) {
             threadsToUse = Runtime.getRuntime().availableProcessors();
         } else {
             threadsToUse = this.ip.getThreadsToUse();

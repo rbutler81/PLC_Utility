@@ -164,10 +164,13 @@ public class ImageProcessing {
 
         for (int r = p.getFromRadiusPixels(); r <= p.getToRadiusPixels(); r++) {
 
-            int[][] houghAccumulator = oneRadiusHoughIteration(p.getEdgeImage(), r, p.getIp().getHoughThetaIncrement());
+            int[][] houghAccumulator = oneRadiusHoughIteration(p.getEdgeImage(),
+                    r,
+                    p.getIp().getHoughThetaIncrement(),
+                    p.getHoughRunningAccumulator());
 
             // before moving to the next radius, compare the hough array to the hough accumulator array and update the largest values found
-            updateRunningAccumulator(p.getHoughRunningAccumulator(), houghAccumulator, r);
+            // updateRunningAccumulator(p.getHoughRunningAccumulator(), houghAccumulator, r);
             // add last hough layer for radius r into the list
             houghLayers.add(houghAccumulator);
             
@@ -213,7 +216,7 @@ public class ImageProcessing {
         }
     }
 
-    public static int[][] oneRadiusHoughIteration(boolean[][] edgeImage, int radius, int thetaIncrement) {
+    public static int[][] oneRadiusHoughIteration(boolean[][] edgeImage, int radius, int thetaIncrement, RadiusAndValue[][] runningHoughAccumulator) {
 
         int yRes = edgeImage.length;
         int xRes = edgeImage[0].length;
@@ -240,6 +243,12 @@ public class ImageProcessing {
 
                         if (valIsBetween(0, xPoint, xRes -1) && valIsBetween(0, yPoint, yRes -1)) {
                             accumulator[yPoint][xPoint] = accumulator[yPoint][xPoint] + 1;
+
+                            if (accumulator[yPoint][xPoint] > runningHoughAccumulator[yPoint][xPoint].getValue()) {
+                                runningHoughAccumulator[yPoint][xPoint].setValue(accumulator[yPoint][xPoint]);
+                                runningHoughAccumulator[yPoint][xPoint].setRadius(radius);
+                            }
+
                         }
                     }
                 }
@@ -563,22 +572,21 @@ public class ImageProcessing {
         int thetaIncrement = p.getIp().getHoughThetaIncrement();
         int xRes = p.getIp().getCameraResolution_x();
         int yRes = p.getIp().getCameraResolution_y();
+        RadiusAndValue[][] runningHoughAccumulator = RadiusAndValue.createTwoDimensionalArray(xRes, yRes);
 
         for (int radius = radiusFrom; radius <=radiusTo; radius++) {
-
             boolean[][] edgeArray = Clone.deepClone(p.getEdgeImage());
-            es.execute(new HoughWorkerThread(radius, thetaIncrement, edgeArray, msg));
-
+            es.execute(new HoughWorkerThread(radius, thetaIncrement, edgeArray, msg, runningHoughAccumulator));
         }
         es.shutdown();
 
         while (!es.isTerminated()) {}
 
-        RadiusAndValue[][] runningHoughAccumulator = RadiusAndValue.createTwoDimensionalArray(xRes, yRes);
+
         List<HoughMessage> houghArrays = msg.removeAll();
         List<int[][]> arrays = new ArrayList<>();
         for (HoughMessage hm: houghArrays) {
-            ImageProcessing.updateRunningAccumulator(runningHoughAccumulator, hm.getHoughArray(), hm.getRadius());
+            // ImageProcessing.updateRunningAccumulator(runningHoughAccumulator, hm.getHoughArray(), hm.getRadius());
             arrays.add(hm.getHoughArray());
         }
         MeanStandardDeviation msd = ImageProcessing.calculateMeanAndStd(runningHoughAccumulator);
