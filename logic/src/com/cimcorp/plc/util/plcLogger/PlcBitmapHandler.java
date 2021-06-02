@@ -1,6 +1,6 @@
 package com.cimcorp.plc.util.plcLogger;
 
-import com.cimcorp.plc.util.palletImaging.PalletBitmap;
+import com.cimcorp.plc.util.palletImaging.PalletDataFiles;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -67,8 +67,8 @@ public class PlcBitmapHandler {
 
     public void writeImageToDisk(String filename, BufferedImage img) throws IOException {
 
-        PalletBitmap palletBitmap = new PalletBitmap(imagesToKeep, "");
-        palletBitmap.writeToDiskWithPath(filename, img, Paths.get(path));
+        PalletDataFiles palletDataFiles = new PalletDataFiles(imagesToKeep, "");
+        palletDataFiles.writeToDiskWithPath(filename, img, Paths.get(path));
 
     }
 }

@@ -15,7 +15,10 @@ import java.util.concurrent.Executors;
 
 public class ImageProcessing {
 
-    public static int[][] convertByteArrayTo2DIntArray(byte[] inputArray, int xRes, int yRes, int startingOffset, boolean flipImageHorizontally) {
+    private static final int INVALID_DATA = -1;
+    private static final int ERROR_DATA = 0;
+
+    public static int[][] convertByteArrayTo2DIntArray(byte[] inputArray, int xRes, int yRes, int startingOffset, boolean flipImageHorizontally, int minAcceptableDistance, int floorDistance) {
 
         int[][] outputArray = new int[yRes][xRes];
         int readPointer = startingOffset;
@@ -35,7 +38,14 @@ public class ImageProcessing {
                 BigDecimal lowByte = new BigDecimal(Byte.toUnsignedInt(inputArray[readPointer]), mc);
                 BigDecimal result = new BigDecimal(2,mc).pow(8).multiply(highByte).add(lowByte);
 
-                outputArray[y][xAdjusted] = result.intValue();
+                int resultInt = result.intValue();
+
+                if (((resultInt >= minAcceptableDistance) && (resultInt <= floorDistance + 1000))
+                        || resultInt == ERROR_DATA) {
+                    outputArray[y][xAdjusted] = resultInt;
+                } else {
+                    outputArray[y][xAdjusted] = INVALID_DATA;
+                }
 
                 readPointer = readPointer + 2;
             }
@@ -66,62 +76,73 @@ public class ImageProcessing {
 
         p.setBoolImage(new boolean[p.getIp().getCameraResolution_y()][p.getIp().getCameraResolution_x()]);
 
+        int topLeft_x = p.getIp().getCropTopLeft_x();
+        int topLeft_y = p.getIp().getCropTopLeft_y();
+        int bottomRight_x = p.getIp().getCropBottomRight_x();
+        int bottomRight_y = p.getIp().getCropBottomRight_y();
+
         // iterate through the raw data array and create the boolean image array
         for (int y = 0; y < p.getIp().getCameraResolution_y(); y++) {
             for (int x = 0; x < p.getIp().getCameraResolution_x(); x++) {
+                // check to make sure point is within the cropped area
+                if (valIsBetween(topLeft_x,x,bottomRight_x) && valIsBetween(topLeft_y,y,bottomRight_y)) {
 
-                // if missing data error correction is enabled find the average value in an area and 'fill in the holes'
-                if (p.getIp().isErrorCorrectionAverageMissingDataEnabled() && (p.getFilteredAndCorrectedImage()[y][x] == 0)) {
+                    // if missing data error correction is enabled find the average value in an area and 'fill in the holes'
+                    if (p.getIp().isErrorCorrectionAverageMissingDataEnabled() && (p.getOriginalImage()[y][x] == 0)) {
 
-                    int xStart, xEnd, yStart, yEnd;
-                    int blockSize = p.getIp().getErrorCorrectionBlockSize();
-                    boolean blockSizeIsEven = ((blockSize % 2) == 0);
+                        int xStart, xEnd, yStart, yEnd;
+                        int blockSize = p.getIp().getErrorCorrectionBlockSize();
+                        boolean blockSizeIsEven = ((blockSize % 2) == 0);
 
-                    if (blockSizeIsEven) {
+                        if (blockSizeIsEven) {
 
-                        xStart = x - (blockSize / 2);
-                        xEnd = x + (blockSize / 2) - 1;
-                        xStart = limitInt(0,xStart,p.getIp().getCameraResolution_x() - 1);
-                        xEnd = limitInt(0,xEnd,p.getIp().getCameraResolution_x() - 1);
+                            xStart = x - (blockSize / 2);
+                            xEnd = x + (blockSize / 2) - 1;
+                            xStart = limitInt(0, xStart, p.getIp().getCameraResolution_x() - 1);
+                            xEnd = limitInt(0, xEnd, p.getIp().getCameraResolution_x() - 1);
 
-                        yStart = y - (blockSize / 2);
-                        yEnd = y + (blockSize / 2) - 1;
-                        yStart = limitInt(0,yStart,p.getIp().getCameraResolution_y() - 1);
-                        yEnd = limitInt(0,yEnd,p.getIp().getCameraResolution_y() - 1);
+                            yStart = y - (blockSize / 2);
+                            yEnd = y + (blockSize / 2) - 1;
+                            yStart = limitInt(0, yStart, p.getIp().getCameraResolution_y() - 1);
+                            yEnd = limitInt(0, yEnd, p.getIp().getCameraResolution_y() - 1);
 
-                    } else {
+                        } else {
 
-                        xStart = x - (blockSize / 2);
-                        xEnd = x + (blockSize / 2);
-                        xStart = limitInt(0,xStart,p.getIp().getCameraResolution_x() - 1);
-                        xEnd = limitInt(0,xEnd,p.getIp().getCameraResolution_x() - 1);
+                            xStart = x - (blockSize / 2);
+                            xEnd = x + (blockSize / 2);
+                            xStart = limitInt(0, xStart, p.getIp().getCameraResolution_x() - 1);
+                            xEnd = limitInt(0, xEnd, p.getIp().getCameraResolution_x() - 1);
 
-                        yStart = y - (blockSize / 2);
-                        yEnd = y + (blockSize / 2);
-                        yStart = limitInt(0,yStart,p.getIp().getCameraResolution_y() - 1);
-                        yEnd = limitInt(0,yEnd,p.getIp().getCameraResolution_y() - 1);
+                            yStart = y - (blockSize / 2);
+                            yEnd = y + (blockSize / 2);
+                            yStart = limitInt(0, yStart, p.getIp().getCameraResolution_y() - 1);
+                            yEnd = limitInt(0, yEnd, p.getIp().getCameraResolution_y() - 1);
 
-                    }
+                        }
 
-                    // gather non-zero values from the block area, calculate average
-                    List<Integer> valuesToAverage = new ArrayList<>();
-                    for (int i = yStart; i <= yEnd; i++) {
-                        for (int j = xStart; j <= xEnd; j++) {
+                        // gather non-zero values from the block area, calculate average
+                        List<Integer> valuesToAverage = new ArrayList<>();
+                        for (int i = yStart; i <= yEnd; i++) {
+                            for (int j = xStart; j <= xEnd; j++) {
 
-                            if ((p.getHeightThresholdMax() > p.getFilteredAndCorrectedImage()[i][j]) && (p.getHeightThresholdMin() < p.getFilteredAndCorrectedImage()[i][j])) {
-                                valuesToAverage.add(p.getFilteredAndCorrectedImage()[i][j]);
+                                if ((p.getHeightThresholdMax() > p.getFilteredAndCorrectedImage()[i][j]) && (p.getHeightThresholdMin() < p.getFilteredAndCorrectedImage()[i][j])) {
+                                    valuesToAverage.add(p.getFilteredAndCorrectedImage()[i][j]);
+                                }
                             }
                         }
+                        MeanStandardDeviation msd = new MeanStandardDeviation(valuesToAverage);
+                        p.setValueInFilteredAndCorrectedImage(x, y, msd.getMean().setScale(0, RoundingMode.HALF_UP).intValue());
                     }
-                    MeanStandardDeviation msd = new MeanStandardDeviation(valuesToAverage);
-                    p.setValueInFilteredAndCorrectedImage(x, y, msd.getMean().setScale(0,RoundingMode.HALF_UP).intValue());
-                }
 
-                // map values in the raw image to 'true' or 'false' in the boolean image
-                if ((p.getHeightThresholdMax() > p.getFilteredAndCorrectedImage()[y][x]) && (p.getHeightThresholdMin() < p.getFilteredAndCorrectedImage()[y][x])) {
-                    p.setPointInBoolData(x,y, true);
+                    // map values in the raw image to 'true' or 'false' in the boolean image
+                    if ((p.getHeightThresholdMax() > p.getFilteredAndCorrectedImage()[y][x]) && (p.getHeightThresholdMin() < p.getFilteredAndCorrectedImage()[y][x])) {
+                        p.setPointInBoolData(x, y, true);
+                    } else {
+                        p.setPointInBoolData(x, y, false);
+                    }
                 } else {
-                    p.setPointInBoolData(x,y, false);
+                    // point is outside of cropped area, set it to FALSE
+                    p.setPointInBoolData(x, y, false);
                 }
             }
         }
@@ -581,7 +602,6 @@ public class ImageProcessing {
         es.shutdown();
 
         while (!es.isTerminated()) {}
-
 
         List<HoughMessage> houghArrays = msg.removeAll();
         List<int[][]> arrays = new ArrayList<>();

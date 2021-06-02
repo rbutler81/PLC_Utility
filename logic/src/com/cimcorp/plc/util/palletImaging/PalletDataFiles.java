@@ -4,8 +4,7 @@ import com.cimcorp.misc.helpers.Clone;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
@@ -15,9 +14,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Pattern;
 
-public class PalletBitmap {
+public class PalletDataFiles {
 
     private static final int STARTING_COLOUR = 0;
     private static final int LARGEST_COLOUR = 255;
@@ -29,13 +27,13 @@ public class PalletBitmap {
     private String path;
     private int trackingNumber = -1;
 
-    public PalletBitmap(int imagesToKeep, String path, int trackingNumber) {
+    public PalletDataFiles(int imagesToKeep, String path, int trackingNumber) {
         this.imagesToKeep = imagesToKeep;
         this.path = path;
         this.trackingNumber = trackingNumber;
     }
 
-    public PalletBitmap(int imagesToKeep, String path) {
+    public PalletDataFiles(int imagesToKeep, String path) {
         this.imagesToKeep = imagesToKeep;
         this.path = path;
     }
@@ -158,7 +156,7 @@ public class PalletBitmap {
 
         File file = null;
         if (trackingNumber >= 1) {
-            file = getFile(filename);
+            file = getFile(filename, "png");
         } else {
             String s = p.toString() + "\\" + filename + ".png";
             file = new File(s);
@@ -172,33 +170,34 @@ public class PalletBitmap {
             }
         }
 
-        // make a list of bmp files contained in the bitmap folder
-        File[] files = new File(p.toString()).listFiles();
-        List<File> imageList = new ArrayList<>();
-        for (int i = 0; i < files.length; i++) {
+        cleanUpFiles(p);
+    }
 
-            if (Pattern.compile(Pattern.quote(".png"), Pattern.CASE_INSENSITIVE).matcher(files[i].getName()).find()) {
-                imageList.add(files[i]);
-            }
+    private void cleanUpFiles(Path p) {
+        // make a list of files contained in the images folder
+        File[] files = new File(p.toString()).listFiles();
+        List<File> listOfFiles = new ArrayList<>();
+        for (int i = 0; i < files.length; i++) {
+            listOfFiles.add(files[i]);
         }
 
-        // check if the number of bitmaps on the disk is greater than the configured amount - if so, delete the oldest ones first
-        if (imageList.size() > imagesToKeep) {
+        // check if the number of files on the disk is greater than the configured amount - if so, delete the oldest ones first
+        if (listOfFiles.size() > imagesToKeep) {
 
-            File[] bitmapFiles = new File[imageList.size()];
-            imageList.toArray(bitmapFiles);
-            Arrays.sort(bitmapFiles, Comparator.comparingLong(File::lastModified));
-            int numberOfFilesToDelete = imageList.size() - imagesToKeep;
+            File[] filesToDelete = new File[listOfFiles.size()];
+            listOfFiles.toArray(filesToDelete);
+            Arrays.sort(filesToDelete, Comparator.comparingLong(File::lastModified));
+            int numberOfFilesToDelete = listOfFiles.size() - imagesToKeep;
             for (int i = 0; i < numberOfFilesToDelete; i++) {
-                bitmapFiles[i].delete();
+                filesToDelete[i].delete();
             }
         }
     }
 
-    private File getFile(String filename) {
+    private File getFile(String filename, String extension) {
 
         String originalFileName = filename;
-        filename = filename + "_" + trackingNumber + ".png";
+        filename = filename + "_" + trackingNumber + "." + extension;
         File folder = new File(path);
         String[] files = folder.list();
 
@@ -212,7 +211,7 @@ public class PalletBitmap {
                 }
             }
             if (exists) {
-                filename = originalFileName + "_" + trackingNumber + "_" + append + ".png";
+                filename = originalFileName + "_" + trackingNumber + "_" + append + "." + extension;
                 append = append + 1;
             } else {
                 done = true;
@@ -308,6 +307,37 @@ public class PalletBitmap {
                 }
             }
         }
+    }
+
+    public void saveSerializedData(SerializedPalletDetails data) throws IOException {
+
+        Path p = Paths.get(path);
+
+        if (!Files.exists(p)) {
+            Files.createDirectories(p);
+        }
+
+        File dataFile = getFile("Data", "ser");
+
+        FileOutputStream fileOut = new FileOutputStream(dataFile.toString());
+        ObjectOutputStream out = new ObjectOutputStream(fileOut);
+        out.writeObject(data);
+        out.close();
+        fileOut.close();
+
+        cleanUpFiles(p);
+
+    }
+
+    public static SerializedPalletDetails readSerializedData(String fileName) throws IOException, ClassNotFoundException {
+
+        FileInputStream fileIn = new FileInputStream(fileName);
+        ObjectInputStream in = new ObjectInputStream(fileIn);
+        SerializedPalletDetails toReturn = (SerializedPalletDetails) in.readObject();
+        in.close();
+        fileIn.close();
+        return toReturn;
+
     }
 
 }

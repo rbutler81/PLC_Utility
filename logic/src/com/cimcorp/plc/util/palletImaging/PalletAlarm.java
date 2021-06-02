@@ -1,9 +1,13 @@
 package com.cimcorp.plc.util.palletImaging;
 
-public enum PalletAlarm {
+import java.io.Serializable;
+
+public enum PalletAlarm implements Serializable {
     NO_ALARM,
     POST_DETECTED,
     CAMERA_TIMEOUT;
+
+    private static final long serialVersionUID = 1L;
 
     @Override
     public String toString() {

@@ -1,8 +1,11 @@
 package com.cimcorp.plc.util.palletImaging;
 
+import java.io.Serializable;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class RadiusAndValue {
+public class RadiusAndValue implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int radius;
     private int value;

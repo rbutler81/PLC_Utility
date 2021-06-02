@@ -3,6 +3,7 @@ package com.cimcorp.plc.util;
 import com.cimcorp.configFile.ParamRangeException;
 import com.cimcorp.misc.helpers.ApplicationSegment;
 import com.cimcorp.plc.util.palletImaging.PalletImageRecognition;
+import com.cimcorp.plc.util.palletImaging.ValueOutOfRangeException;
 import com.cimcorp.plc.util.plcLogger.PlcLogger;
 
 import java.io.File;
@@ -10,13 +11,16 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Main {
 
     // setup static variables
-    static final String VER = "1.1";
+    static final String VER = "2_20210602";
     public static final String PATH_SEPARATOR = File.separator;
     static final String PATH = Paths.get(".").toAbsolutePath().normalize().toString() + PATH_SEPARATOR;
+    static final int MAX_APP_SEGMENTS = 2;
 
     // plc logger variables
     static final String PLC_LOGGER_INI = "plclogger.ini";
@@ -38,35 +42,28 @@ public class Main {
                     appSegments.add(new PlcLogger(PATH, PLC_LOGGER_INI, PLC_LOGGER_NAME));
                 } catch (IOException | ParamRangeException e) {
                     e.printStackTrace();
-                    System.exit(1);
+                    System.exit(10);
                 }
             // if the 'palletimage.ini' is found in the command line arguments
             } else if (s.equals(PALLET_IMAGE_INI)) {
                 try {
                     appSegments.add(new PalletImageRecognition(PATH, PALLET_IMAGE_INI, PALLET_IMAGE_NAME));
-                } catch (IOException | ParamRangeException e) {
+                } catch (IOException | ParamRangeException | ValueOutOfRangeException | ClassNotFoundException e) {
                     e.printStackTrace();
-                    System.exit(1);
+                    System.exit(10);
                 }
             }
         }
 
+        ExecutorService es = Executors.newFixedThreadPool(MAX_APP_SEGMENTS);
         List<Thread> threads = new ArrayList<>();
         // find and start application segments
         for (ApplicationSegment as: appSegments) {
-            Thread newThread = new Thread(as, as.getName());
-            newThread.start();
-            threads.add(newThread);
+            es.execute(as);
         }
+        es.shutdown();
 
-        // threads should now be running, program will end if all threads end
-        for (Thread t: threads) {
-            try {
-                t.join();
-            } catch (Throwable e) {
-                e.printStackTrace();
-            }
-        }
+        while (!es.isTerminated()) {}
 
     }
 

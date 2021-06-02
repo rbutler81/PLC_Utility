@@ -1,13 +1,17 @@
 package com.cimcorp.plc.util.palletImaging;
 
-import com.cimcorp.misc.math.BigDecimalMath;
 import com.cimcorp.configFile.Config;
 import com.cimcorp.configFile.ParamRangeException;
+import com.cimcorp.misc.math.BigDecimalMath;
 import com.cimcorp.misc.math.Polynomial;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.List;
 
-public class ImageParameters {
+public class ImageParameters implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     // communication parameters
     private int listenerPort;
@@ -29,7 +33,9 @@ public class ImageParameters {
     // algorithm parameters
     private int floorDistanceFromCamera;
     private int palletHeightFromFloor;
-    private int toFromPixelSearchAdjust;
+    private int toPixelSearchAdjust;
+    private int fromPixelSearchAdjust;
+    private int minAcceptableDistanceFromCamera;
     private BigDecimal searchForRadiusDeviation;
     private int houghCirclePoints;
     private int tireSamplePoints;
@@ -38,6 +44,15 @@ public class ImageParameters {
     private int distanceToCenterOfFrameFromPalletOriginMM_x;
     private int distanceToCenterOfFrameFromPalletOriginMM_y;
     private int threadsToUse;
+    private boolean cropImageEnable;
+    private int cropTopLeft_x;
+    private int cropTopLeft_y;
+    private int cropBottomRight_x;
+    private int cropBottomRight_y;
+    // debug parameters
+    private boolean debugEnabled;
+    private String debugFilename;
+    private boolean useDebugFileParams;
     // error correction parameters
     private boolean errorCorrectionAverageMissingDataEnabled;
     private int errorCorrectionBlockSize;
@@ -59,7 +74,7 @@ public class ImageParameters {
     private int houghThetaIncrement;
     private int sampleThetaIncrement;
 
-    public ImageParameters(Config config) throws ParamRangeException {
+    public ImageParameters(Config config) throws ParamRangeException, ValueOutOfRangeException {
 
         this.listenerPort = config.getSingleParamAsInt("ListenerPort", 1, 65535);
         this.remotePort = config.getSingleParamAsInt("RemotePort", 1, 65535);
@@ -83,11 +98,63 @@ public class ImageParameters {
         this.searchForRadiusDeviation = config.getSingleParamAsBigDecimal("SearchForRadiusDeviation", 0);
         this.houghCirclePoints = config.getSingleParamAsInt("HoughCirclePoints", 4, 360);
         this.tireSamplePoints = config.getSingleParamAsInt("TireSamplePoints", 4, 360);
-        this.toFromPixelSearchAdjust = config.getSingleParamAsInt("ToFromPixelSearchAdjust", 0, 10);
+        this.toPixelSearchAdjust = config.getSingleParamAsInt("ToPixelSearchAdjust", -10, 10);
+        this.fromPixelSearchAdjust = config.getSingleParamAsInt("FromPixelSearchAdjust", -10, 10);
+        this.minAcceptableDistanceFromCamera = config.getSingleParamAsInt("MinAcceptableDistanceFromCamera", 0, 5000);
+
+        this.debugEnabled = config.getSingleParamAsBool("DebugModeEnabled");
+        this.debugFilename = config.getSingleParamAsString("DebugFile");
+        this.useDebugFileParams = config.getSingleParamAsBool("UseDebugFileParams");
+
         this.flipImageHorizontally = config.getSingleParamAsBool("FlipImageHorizontally");
         this.acceptedSampleSuccessPercent = config.getSingleParamAsInt("AcceptedSampleSuccessPercent", 1, 100);
         this.distanceToCenterOfFrameFromPalletOriginMM_x = config.getSingleParamAsInt("DistanceToCenterOfFrameFromPalletOriginMM_x");
         this.distanceToCenterOfFrameFromPalletOriginMM_y = config.getSingleParamAsInt("DistanceToCenterOfFrameFromPalletOriginMM_y");
+
+        this.cropImageEnable = config.getSingleParamAsBool("CropImageEnable");
+        if (this.cropImageEnable) {
+            List<String> topLeftPixels = config.getParam("TopLeftPixel");
+            List<String> bottomRightPixels = config.getParam("BottomRightPixel");
+            // check values to make sure they define a box
+            int topLeft_x = Integer.parseInt(topLeftPixels.get(0));
+            int bottomRight_x = Integer.parseInt(bottomRightPixels.get(0));
+            int topLeft_y = Integer.parseInt(topLeftPixels.get(1));
+            int bottomRight_y = Integer.parseInt(bottomRightPixels.get(1));
+
+            if (valIsBetween(0,topLeft_x,cameraResolution_x)) {
+                if (valIsBetween(topLeft_x+1,bottomRight_x,cameraResolution_x)) {
+                    // x values are ok
+                    if (valIsBetween(0,topLeft_y,cameraResolution_y)) {
+                        if (valIsBetween(topLeft_y+1,bottomRight_y,cameraResolution_y)) {
+                            // all values are ok
+                            this.cropTopLeft_x = topLeft_x;
+                            this.cropBottomRight_x = bottomRight_x;
+                            this.cropTopLeft_y = topLeft_y;
+                            this.cropBottomRight_y = bottomRight_y;
+                        } else {
+                            // second y value is not ok
+                            throw new ValueOutOfRangeException("BottomRightCrop_y",bottomRight_y,topLeft_y+1,cameraResolution_y);
+                        }
+                    } else {
+                        // first y value is not ok
+                        throw new ValueOutOfRangeException("TopLeftCrop_y",topLeft_y,0,cameraResolution_y);
+                    }
+                } else {
+                    // second x value is not ok
+                    throw new ValueOutOfRangeException("BottomRightCrop_x",bottomRight_x,topLeft_x+1,cameraResolution_x);
+                }
+            } else {
+                // first x value is not ok
+                throw new ValueOutOfRangeException("TopLeftCrop_x",topLeft_x,0,cameraResolution_x);
+            }
+         } else {
+            // set cropping region to the entire image
+            this.cropTopLeft_x = 0;
+            this.cropBottomRight_x = cameraResolution_x;
+            this.cropTopLeft_y = 0;
+            this.cropBottomRight_y = cameraResolution_y;
+        }
+
         this.threadsToUse = config.getSingleParamAsInt("ThreadsToUse", 1, 99);
 
         this.errorCorrectionAverageMissingDataEnabled = config.getSingleParamAsBool("ErrorCorrectionAverageMissingDataEnabled");
@@ -117,6 +184,15 @@ public class ImageParameters {
         this.houghThetaIncrement = BigDecimalMath.divide(360, houghCirclePoints);
         this.sampleThetaIncrement = BigDecimalMath.divide(360, tireSamplePoints);
 
+
+    }
+
+    private static boolean valIsBetween(int min, int val, int max) {
+        if ((val >= min) && (val <= max)) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     public int getListenerPort() {
@@ -183,8 +259,8 @@ public class ImageParameters {
         return sampleThetaIncrement;
     }
 
-    public int getToFromPixelSearchAdjust() {
-        return toFromPixelSearchAdjust;
+    public int getToPixelSearchAdjust() {
+        return toPixelSearchAdjust;
     }
 
     public boolean isFlipImageHorizontally() {
@@ -285,6 +361,42 @@ public class ImageParameters {
 
     public int getThreadsToUse() {
         return threadsToUse;
+    }
+
+    public int getFromPixelSearchAdjust() {
+        return fromPixelSearchAdjust;
+    }
+
+    public int getMinAcceptableDistanceFromCamera() {
+        return minAcceptableDistanceFromCamera;
+    }
+
+    public int getCropTopLeft_x() {
+        return cropTopLeft_x;
+    }
+
+    public int getCropTopLeft_y() {
+        return cropTopLeft_y;
+    }
+
+    public int getCropBottomRight_x() {
+        return cropBottomRight_x;
+    }
+
+    public int getCropBottomRight_y() {
+        return cropBottomRight_y;
+    }
+
+    public boolean isDebugEnabled() {
+        return debugEnabled;
+    }
+
+    public String getDebugFilename() {
+        return debugFilename;
+    }
+
+    public boolean useDebugFileParams() {
+        return useDebugFileParams;
     }
 }
 

@@ -5,12 +5,15 @@ import com.cimcorp.misc.helpers.KeyValuePairException;
 import com.cimcorp.misc.math.MeanStandardDeviation;
 import com.cimcorp.misc.math.BigDecimalMath;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class Pallet {
+public class Pallet implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int msgId;
     private int trackingNumber;
@@ -36,6 +39,7 @@ public class Pallet {
     private List<Integer> uniqueStackHeights = new ArrayList<>();
     private MeanStandardDeviation houghMeanAndStdDeviation = new MeanStandardDeviation();
     // Images
+    private List<Integer> cameraByteArray;
     private int[][] originalImage;
     private int[][] filteredAndCorrectedImage;
     private boolean[][] boolImage;
@@ -113,11 +117,11 @@ public class Pallet {
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm + rDeviation_mm);
             BigDecimal numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
             BigDecimal denominator = BigDecimalMath.add(stackDistanceFromCamera, swDeviation);
-            fromRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) - ip.getToFromPixelSearchAdjust();
+            fromRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) - ip.getFromPixelSearchAdjust();
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm - rDeviation_mm);
             numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
             denominator = BigDecimalMath.subtract(stackDistanceFromCamera, swDeviation);
-            toRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) + ip.getToFromPixelSearchAdjust();
+            toRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) + ip.getToPixelSearchAdjust();
 
             // calculate heights to filter out of the 3d image data
             heightThresholdMin = BigDecimalMath.subtract(stackDistanceFromCamera, swDeviation, 0);
@@ -136,11 +140,11 @@ public class Pallet {
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm + rDeviation_mm);
             BigDecimal numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
             BigDecimal denominator = BigDecimalMath.add(stackDistanceFromCameraMax, swDeviation);
-            fromRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) - ip.getToFromPixelSearchAdjust();
+            fromRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) - ip.getFromPixelSearchAdjust();
             // (A_x * rRadius_mm) / (rStackDistanceFromCamera_mm - rDeviation_mm);
             numerator = BigDecimalMath.multiply(odRadius, ip.getCameraFactor_x());
             denominator = BigDecimalMath.subtract(stackDistanceFromCameraMin, swDeviation);
-            toRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) + ip.getToFromPixelSearchAdjust();
+            toRadiusPixels = BigDecimalMath.divide(numerator, denominator, 0) + ip.getToPixelSearchAdjust();
 
             // calculate heights to filter out of the 3d image data
             heightThresholdMin = BigDecimalMath.subtract(stackDistanceFromCameraMin, swDeviation, 0);
@@ -414,6 +418,15 @@ public class Pallet {
 
     public Pallet setAlarm(PalletAlarm alarm) {
         this.alarm = alarm;
+        return this;
+    }
+
+    public List<Integer> getCameraByteArray() {
+        return cameraByteArray;
+    }
+
+    public Pallet setCameraByteArray(List<Integer> cameraByteArray) {
+        this.cameraByteArray = cameraByteArray;
         return this;
     }
 }
