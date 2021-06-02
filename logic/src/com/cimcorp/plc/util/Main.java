@@ -65,6 +65,7 @@ public class Main {
 
         while (!es.isTerminated()) {}
 
+        System.exit(0);
     }
 
 }

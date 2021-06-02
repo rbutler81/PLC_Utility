@@ -337,6 +337,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                 logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
             }
         }
+        logger.logAndPrint("Shutting Down Application...");
         logger.stop();
     }
 
