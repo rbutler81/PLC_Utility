@@ -38,6 +38,7 @@ public class PalletImageRecognition extends ApplicationSegment {
     private final int threadsToUse;
     private boolean debugMode;
     private boolean extractAndSaveIniFile;
+    private boolean extractImageAsFile;
     private SerializedPalletDetails dataFromFile;
     private SerializedPalletDetails dataToSave;
 
@@ -56,6 +57,7 @@ public class PalletImageRecognition extends ApplicationSegment {
         // check for debug mode
         this.debugMode = imageParameters.isDebugEnabled();
         this.extractAndSaveIniFile = imageParameters.isExtractIniAsFile() && debugMode;
+        this.extractImageAsFile = imageParameters.isExtractImageAsFile() && debugMode && !extractAndSaveIniFile;
 
         if (debugMode) {
             logger.logAndPrint("*** Debug Mode Enabled ***");
@@ -72,6 +74,7 @@ public class PalletImageRecognition extends ApplicationSegment {
     }
 
     private void setupDebugMode() throws IOException, ClassNotFoundException {
+
         File data = new File(path + imageParameters.getDebugFilename());
 
         if (!data.exists()) {
@@ -81,10 +84,17 @@ public class PalletImageRecognition extends ApplicationSegment {
             logger.logAndPrint("Reading " + imageParameters.getDebugFilename() + "...");
             dataFromFile = PalletDataFiles.readSerializedData(data.toString());
 
+            PalletDataFiles.readCameraPacket(path,"{msg_9452}{TN_9452}{OD_775}{ID_438}{SW_265}{n1_5}{n2_5}{n3_5}{n4_5}{n5_0}.bin");
+
             // extract the ini from the data file and save it to disk -- ends program when complete
             if (extractAndSaveIniFile) {
 
                 extractAndSaveIniFile();
+
+            // extract the camera packet from the data file and save it to disk -- ends program when complete
+            } else if (extractImageAsFile) {
+
+                extractImageAsFile();
 
             // decide whether to run the algorithm using the ini in the data file, or the ini saved in the program folder
             } else {
@@ -99,19 +109,23 @@ public class PalletImageRecognition extends ApplicationSegment {
         }
     }
 
+    private void extractImageAsFile() throws IOException {
+        logger.logAndPrint("Saving Image File Found in " + imageParameters.getDebugFilename());
+        PalletDataFiles pdf = new PalletDataFiles(imagesToKeep, path, dataFromFile.getTrackingNumber());
+        pdf.saveCameraPacket(dataFromFile);
+    }
+
     private void extractAndSaveIniFile() throws IOException {
-
         logger.logAndPrint("Saving INI File Found in " + imageParameters.getDebugFilename());
-        PalletDataFiles iniFileWriter = new PalletDataFiles(imagesToKeep, path, dataFromFile.getTrackingNumber());
-        iniFileWriter.saveIniFile(dataFromFile);
-
+        PalletDataFiles pdf = new PalletDataFiles(imagesToKeep, path, dataFromFile.getTrackingNumber());
+        pdf.saveIniFile(dataFromFile);
     }
 
     @Override
     public void run() {
 
         // if INI file was extracted, exit the program
-        if (!extractAndSaveIniFile) {
+        if (!extractAndSaveIniFile && !extractImageAsFile) {
 
             logger.logAndPrint("Application Started -- Image Processing Enabled and Running");
             logger.logAndPrint("Using " + threadsToUse + " Available CPU Cores");
