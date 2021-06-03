@@ -107,6 +107,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                 }
             }
         }
+
     }
 
     private void extractImageAsFile() throws IOException {
