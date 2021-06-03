@@ -5,12 +5,12 @@ import java.util.List;
 
 public class SerializedPalletDetails implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     private String palletMessage;
     private ImageParameters imageParameters;
     private List<Integer> cameraByteArray;
-
+    private int trackingNumber;
 
     public SerializedPalletDetails(String palletMessage) {
         this.palletMessage = palletMessage;
@@ -40,6 +40,15 @@ public class SerializedPalletDetails implements Serializable {
 
     public SerializedPalletDetails setCameraByteArray(List<Integer> cameraByteArray) {
         this.cameraByteArray = cameraByteArray;
+        return this;
+    }
+
+    public int getTrackingNumber() {
+        return trackingNumber;
+    }
+
+    public SerializedPalletDetails setTrackingNumber(int trackingNumber) {
+        this.trackingNumber = trackingNumber;
         return this;
     }
 }

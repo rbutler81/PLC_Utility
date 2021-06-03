@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 public class Main {
 
     // setup static variables
-    static final String VER = "2_20210602";
+    static final String VER = "2_20210603";
     public static final String PATH_SEPARATOR = File.separator;
     static final String PATH = Paths.get(".").toAbsolutePath().normalize().toString() + PATH_SEPARATOR;
     static final int MAX_APP_SEGMENTS = 2;
@@ -56,8 +56,7 @@ public class Main {
         }
 
         ExecutorService es = Executors.newFixedThreadPool(MAX_APP_SEGMENTS);
-        List<Thread> threads = new ArrayList<>();
-        // find and start application segments
+        // start application segment threads
         for (ApplicationSegment as: appSegments) {
             es.execute(as);
         }

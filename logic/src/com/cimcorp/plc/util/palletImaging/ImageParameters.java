@@ -7,11 +7,15 @@ import com.cimcorp.misc.math.Polynomial;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ImageParameters implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
+
+    // ini file as a list of strings
+    private List<String> iniFileAsStrings = new ArrayList<>();
 
     // communication parameters
     private int listenerPort;
@@ -36,6 +40,7 @@ public class ImageParameters implements Serializable {
     private int toPixelSearchAdjust;
     private int fromPixelSearchAdjust;
     private int minAcceptableDistanceFromCamera;
+    private int maxAcceptableDistanceBelowFloor;
     private BigDecimal searchForRadiusDeviation;
     private int houghCirclePoints;
     private int tireSamplePoints;
@@ -53,6 +58,7 @@ public class ImageParameters implements Serializable {
     private boolean debugEnabled;
     private String debugFilename;
     private boolean useDebugFileParams;
+    private boolean extractIniAsFile;
     // error correction parameters
     private boolean errorCorrectionAverageMissingDataEnabled;
     private int errorCorrectionBlockSize;
@@ -75,6 +81,8 @@ public class ImageParameters implements Serializable {
     private int sampleThetaIncrement;
 
     public ImageParameters(Config config) throws ParamRangeException, ValueOutOfRangeException {
+
+        this.iniFileAsStrings = config.getIniFileAsStrings();
 
         this.listenerPort = config.getSingleParamAsInt("ListenerPort", 1, 65535);
         this.remotePort = config.getSingleParamAsInt("RemotePort", 1, 65535);
@@ -101,10 +109,12 @@ public class ImageParameters implements Serializable {
         this.toPixelSearchAdjust = config.getSingleParamAsInt("ToPixelSearchAdjust", -10, 10);
         this.fromPixelSearchAdjust = config.getSingleParamAsInt("FromPixelSearchAdjust", -10, 10);
         this.minAcceptableDistanceFromCamera = config.getSingleParamAsInt("MinAcceptableDistanceFromCamera", 0, 5000);
+        this.maxAcceptableDistanceBelowFloor = config.getSingleParamAsInt("MaxAcceptableDistanceBelowFloor", 0, 5000);
 
         this.debugEnabled = config.getSingleParamAsBool("DebugModeEnabled");
         this.debugFilename = config.getSingleParamAsString("DebugFile");
         this.useDebugFileParams = config.getSingleParamAsBool("UseDebugFileParams");
+        this.extractIniAsFile = config.getSingleParamAsBool("ExtractIniAsFile");
 
         this.flipImageHorizontally = config.getSingleParamAsBool("FlipImageHorizontally");
         this.acceptedSampleSuccessPercent = config.getSingleParamAsInt("AcceptedSampleSuccessPercent", 1, 100);
@@ -397,6 +407,23 @@ public class ImageParameters implements Serializable {
 
     public boolean useDebugFileParams() {
         return useDebugFileParams;
+    }
+
+    public boolean isExtractIniAsFile() {
+        return extractIniAsFile;
+    }
+
+    public int getMaxAcceptableDistanceBelowFloor() {
+        return maxAcceptableDistanceBelowFloor;
+    }
+
+    public List<String> getIniFileAsStrings() {
+        return iniFileAsStrings;
+    }
+
+    public ImageParameters setIniFileAsStrings(List<String> iniFileAsStrings) {
+        this.iniFileAsStrings = iniFileAsStrings;
+        return this;
     }
 }
 

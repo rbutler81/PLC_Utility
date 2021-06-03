@@ -68,7 +68,7 @@ public class PlcBitmapHandler {
     public void writeImageToDisk(String filename, BufferedImage img) throws IOException {
 
         PalletDataFiles palletDataFiles = new PalletDataFiles(imagesToKeep, "");
-        palletDataFiles.writeToDiskWithPath(filename, img, Paths.get(path));
+        palletDataFiles.writeImageToDiskWithPath(filename, img, Paths.get(path));
 
     }
 }

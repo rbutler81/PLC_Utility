@@ -78,7 +78,7 @@ public class PalletDataFiles {
 
         BufferedImage img = getBufferedImage(data, monochrome);
 
-        writeToDisk(filename, img);
+        writeImageToDisk(filename, img);
 
     }
 
@@ -140,15 +140,15 @@ public class PalletDataFiles {
         return internalData;
     }
 
-    public void writeToDisk(String filename, BufferedImage img) throws IOException {
+    public void writeImageToDisk(String filename, BufferedImage img) throws IOException {
 
         // write to disk
         Path p = Paths.get(path);
-        writeToDiskWithPath(filename, img, p);
+        writeImageToDiskWithPath(filename, img, p);
 
     }
 
-    public void writeToDiskWithPath(String filename, BufferedImage img, Path p) throws IOException {
+    public void writeImageToDiskWithPath(String filename, BufferedImage img, Path p) throws IOException {
 
         if (!Files.exists(p)) {
             Files.createDirectories(p);
@@ -280,7 +280,7 @@ public class PalletDataFiles {
 
         }
 
-        writeToDisk(filename, img);
+        writeImageToDisk(filename, img);
 
     }
 
@@ -326,6 +326,20 @@ public class PalletDataFiles {
         fileOut.close();
 
         cleanUpFiles(p);
+
+    }
+
+    public void saveIniFile(SerializedPalletDetails data) throws IOException {
+
+        File iniFile = getFile("palletimage", "ini");
+
+        BufferedWriter writer = new BufferedWriter(new FileWriter(iniFile));
+        for (String line: data.getImageParameters().getIniFileAsStrings()) {
+            if (line != null) {
+                writer.write(line + "\r\n");
+            }
+        }
+        writer.close();
 
     }
 

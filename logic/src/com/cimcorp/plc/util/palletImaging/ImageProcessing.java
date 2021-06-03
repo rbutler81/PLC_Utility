@@ -18,7 +18,7 @@ public class ImageProcessing {
     private static final int INVALID_DATA = -1;
     private static final int ERROR_DATA = 0;
 
-    public static int[][] convertByteArrayTo2DIntArray(byte[] inputArray, int xRes, int yRes, int startingOffset, boolean flipImageHorizontally, int minAcceptableDistance, int floorDistance) {
+    public static int[][] convertByteArrayTo2DIntArray(byte[] inputArray, int xRes, int yRes, int startingOffset, boolean flipImageHorizontally, int minAcceptableDistance, int floorDistance, int maxAcceptableDistanceBelowFloor) {
 
         int[][] outputArray = new int[yRes][xRes];
         int readPointer = startingOffset;
@@ -40,7 +40,7 @@ public class ImageProcessing {
 
                 int resultInt = result.intValue();
 
-                if (((resultInt >= minAcceptableDistance) && (resultInt <= floorDistance + 1000))
+                if (((resultInt >= minAcceptableDistance) && (resultInt <= floorDistance + maxAcceptableDistanceBelowFloor))
                         || resultInt == ERROR_DATA) {
                     outputArray[y][xAdjusted] = resultInt;
                 } else {
@@ -125,8 +125,8 @@ public class ImageProcessing {
                         for (int i = yStart; i <= yEnd; i++) {
                             for (int j = xStart; j <= xEnd; j++) {
 
-                                if ((p.getHeightThresholdMax() > p.getFilteredAndCorrectedImage()[i][j]) && (p.getHeightThresholdMin() < p.getFilteredAndCorrectedImage()[i][j])) {
-                                    valuesToAverage.add(p.getFilteredAndCorrectedImage()[i][j]);
+                                if ((p.getHeightThresholdMax() > p.getOriginalImage()[i][j]) && (p.getHeightThresholdMin() < p.getOriginalImage()[i][j])) {
+                                    valuesToAverage.add(p.getOriginalImage()[i][j]);
                                 }
                             }
                         }

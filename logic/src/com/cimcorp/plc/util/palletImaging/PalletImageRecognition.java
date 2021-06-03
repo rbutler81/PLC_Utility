@@ -34,10 +34,11 @@ public class PalletImageRecognition extends ApplicationSegment {
 
     private String path;
     private String iniFileName;
-    private ImageParameters ip;
+    private ImageParameters imageParameters;
     private int imagesToKeep;
     private int threadsToUse;
     private boolean debugMode;
+    private boolean extractAndSaveIniFile;
     private SerializedPalletDetails dataFromFile;
     private SerializedPalletDetails dataToSave;
 
@@ -51,290 +52,316 @@ public class PalletImageRecognition extends ApplicationSegment {
         this.imagesToKeep = config.getSingleParamAsInt("ImagesToKeep",0);
 
         this.logger = new Logger(lb, "ImageProcessing");
-        this.ip = new ImageParameters(config);
+        this.imageParameters = new ImageParameters(config);
 
         // check for debug mode
-        this.debugMode = ip.isDebugEnabled();
+        this.debugMode = imageParameters.isDebugEnabled();
+        this.extractAndSaveIniFile = imageParameters.isExtractIniAsFile() && debugMode;
+
         if (debugMode) {
             logger.logAndPrint("*** Debug Mode Enabled ***");
             setupDebugMode();
         }
 
-        if (this.ip.getThreadsToUse() == USE_PHYSICAL_MACHINE_CORES_MAX) {
+        // determine number of threads to use for hough transform
+        if (this.imageParameters.getThreadsToUse() == USE_PHYSICAL_MACHINE_CORES_MAX) {
             threadsToUse = Runtime.getRuntime().availableProcessors();
         } else {
-            threadsToUse = this.ip.getThreadsToUse();
+            threadsToUse = this.imageParameters.getThreadsToUse();
         }
 
     }
 
     private void setupDebugMode() throws IOException, ClassNotFoundException {
-        File data = new File(path + ip.getDebugFilename());
+        File data = new File(path + imageParameters.getDebugFilename());
 
         if (!data.exists()) {
             throw new FileNotFoundException(data.toString());
         } else {
 
-            logger.logAndPrint("Reading " + ip.getDebugFilename() + "...");
+            logger.logAndPrint("Reading " + imageParameters.getDebugFilename() + "...");
             dataFromFile = PalletDataFiles.readSerializedData(data.toString());
 
-            if (ip.useDebugFileParams()) {
-                logger.logAndPrint("Using Parameters from " + ip.getDebugFilename());
-                ip = dataFromFile.getImageParameters();
+            // extract the ini from the data file and save it to disk -- ends program when complete
+            if (extractAndSaveIniFile) {
+
+                extractAndSaveIniFile();
+
+            // decide whether to run the algorithm using the ini in the data file, or the ini saved in the program folder
             } else {
-                logger.logAndPrint("Using Parameters from INI file");
+
+                if (imageParameters.useDebugFileParams()) {
+                    logger.logAndPrint("Using Parameters from " + imageParameters.getDebugFilename());
+                    imageParameters = dataFromFile.getImageParameters();
+                } else {
+                    logger.logAndPrint("Using Parameters from INI file");
+                }
             }
         }
+    }
+
+    private void extractAndSaveIniFile() throws IOException {
+
+        logger.logAndPrint("Saving INI File Found in " + imageParameters.getDebugFilename());
+        PalletDataFiles iniFileWriter = new PalletDataFiles(imagesToKeep, path, dataFromFile.getTrackingNumber());
+        iniFileWriter.saveIniFile(dataFromFile);
+
     }
 
     @Override
     public void run() {
 
-        logger.logAndPrint("Application Started -- Image Processing Enabled and Running");
-        logger.logAndPrint("Using " + threadsToUse + " Available CPU Cores");
+        // if INI file was extracted, exit the program
+        if (!extractAndSaveIniFile) {
 
-        MessageHandler messageHandler = null;
-        UdpCommunicationParameters udpToPlcParams = null;
+            logger.logAndPrint("Application Started -- Image Processing Enabled and Running");
+            logger.logAndPrint("Using " + threadsToUse + " Available CPU Cores");
 
-        String cameraIp = null;
-        int cameraPort = 0;
-        int cameraTimeout = 0;
-        int cameraRetries = 0;
-        boolean imageReceived = false;
+            MessageHandler messageHandler = null;
+            UdpCommunicationParameters udpToPlcParams = null;
 
-        MessageEventData newMsg = null;
+            String cameraIp = null;
+            int cameraPort = 0;
+            int cameraTimeout = 0;
+            int cameraRetries = 0;
+            boolean imageReceived = false;
 
-        if (!debugMode) {
+            MessageEventData newMsg = null;
 
-            // get communication parameters
-            int localPort = ip.getListenerPort();
-            int remotePort = ip.getRemotePort();
-            String remoteIp = ip.getRemoteIp();
-            int resendDelay = ip.getResendDelay();
-            int resendAttempts = ip.getResendAttempts();
+            if (!debugMode) {
 
-            udpToPlcParams = new UdpCommunicationParameters(localPort,
-                    remotePort,
-                    remoteIp,
-                    resendDelay,
-                    resendAttempts);
+                // get communication parameters
+                int localPort = imageParameters.getListenerPort();
+                int remotePort = imageParameters.getRemotePort();
+                String remoteIp = imageParameters.getRemoteIp();
+                int resendDelay = imageParameters.getResendDelay();
+                int resendAttempts = imageParameters.getResendAttempts();
 
-            // setup message handler to / from the plc
-            try {
-                messageHandler = new MessageHandler(udpToPlcParams,
-                        new KvpMessageParser(),
-                        lb);
-            } catch (Throwable t) {
-                logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
-            }
+                udpToPlcParams = new UdpCommunicationParameters(localPort,
+                        remotePort,
+                        remoteIp,
+                        resendDelay,
+                        resendAttempts);
 
-            // setup camera communications
-            cameraIp = ip.getCameraIp();
-            cameraPort = ip.getCameraPort();
-            cameraTimeout = ip.getCameraTimeout();
-            cameraRetries = ip.getCameraRetries();
-
-        }
-
-        boolean runRoutineForever = true;
-        while (runRoutineForever) {
-
-            if (debugMode) {
-                runRoutineForever = false;
-            }
-
-            Pallet pallet = null;
-            dataToSave = null;
-            boolean palletDataOk = true;
-
-            try {
-
-                String newMsgData = null;
-
-                if (!debugMode) {
-
-                    // wait here until a new message arrives from the plc
-                    messageHandler.getReceiveBufferFromRemote().waitUntilNotifiedOrListNotEmpty();
-                    newMsg = messageHandler.getReceiveBufferFromRemote().getNextMsg();
-
-                    this.config = Config.readIniFile(path + iniFileName);
-                    ip = new ImageParameters(config);
-
-                    newMsgData = newMsg.getData();
-
-                } else {
-                    // load message string from the data file
-                    newMsgData = dataFromFile.getPalletMessage();
+                // setup message handler to / from the plc
+                try {
+                    messageHandler = new MessageHandler(udpToPlcParams,
+                            new KvpMessageParser(),
+                            lb);
+                } catch (Throwable t) {
+                    logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
                 }
 
-                logger.logAndPrint("Starting Image Processing, Setting up Pallet...");
-
-                pallet = new Pallet(newMsgData);
-                pallet.setupDetectionParameters(ip);
-                dataToSave = new SerializedPalletDetails(newMsgData);
-                dataToSave.setImageParameters(ip);
-
-            } catch (Throwable t) {
-
-                // received message is malformed
-                logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
-
-                if (!debugMode) {
-                    messageHandler.sendNak(newMsg);
-                }
-
-                palletDataOk = false;
+                // setup camera communications
+                cameraIp = imageParameters.getCameraIp();
+                cameraPort = imageParameters.getCameraPort();
+                cameraTimeout = imageParameters.getCameraTimeout();
+                cameraRetries = imageParameters.getCameraRetries();
 
             }
 
-            try {
+            boolean runRoutineForever = true;
+            while (runRoutineForever) {
 
-                if (palletDataOk) {
+                if (debugMode) {
+                    runRoutineForever = false;
+                }
 
-                    // send an ack
+                Pallet pallet = null;
+                dataToSave = null;
+                boolean palletDataOk = true;
+
+                try {
+
+                    String newMsgData = null;
+
                     if (!debugMode) {
-                        messageHandler.sendAck(newMsg);
-                    }
 
-                    // log pallet details
-                    logger.logAndPrint(PalletLogging.logSearchDetails(pallet));
-                    PalletLogging.logExpectedStacks(pallet, logger);
+                        // wait here until a new message arrives from the plc
+                        messageHandler.getReceiveBufferFromRemote().waitUntilNotifiedOrListNotEmpty();
+                        newMsg = messageHandler.getReceiveBufferFromRemote().getNextMsg();
 
-                    byte [] imageBytes = new byte[ip.getCameraPacketSizeBytes()];
-                    List<Integer> bytesReceivedFromCamera = new ArrayList<>();
-                    if (!debugMode) {
+                        this.config = Config.readIniFile(path + iniFileName);
+                        imageParameters = new ImageParameters(config);
 
-                        // connect to the camera and trigger an image
-                        TcpSendAndReceive tcpConnectToCamera = new TcpSendAndReceive(cameraIp,
-                                cameraPort,
-                                cameraTimeout,
-                                cameraRetries,
-                                lb,
-                                "Tcp_IFM_Camera");
-
-                        logger.logAndPrint("Requesting Image from IFM Camera...");
-                        bytesReceivedFromCamera = tcpConnectToCamera.send(IFM_O3D301_CONNECTION_STRING,
-                                ip.getCameraPacketSizeBytes());
-
-                        pallet.setCameraByteArray(bytesReceivedFromCamera);
-                        dataToSave.setCameraByteArray(bytesReceivedFromCamera);
+                        newMsgData = newMsg.getData();
 
                     } else {
-                        // set camera bytes from data file
-                        pallet.setCameraByteArray(dataFromFile.getCameraByteArray());
-                        bytesReceivedFromCamera = dataFromFile.getCameraByteArray();
+                        // load message string from the data file
+                        newMsgData = dataFromFile.getPalletMessage();
                     }
 
-                    int byteArraySizeFromCamera = pallet.getCameraByteArray().size();
+                    logger.logAndPrint("Starting Image Processing, Setting up Pallet...");
 
-                    // if the correct amount of bytes were received from the camera
-                    if (byteArraySizeFromCamera == ip.getCameraPacketSizeBytes()) {
-                        for (int i = 0; i < ip.getCameraPacketSizeBytes(); i++) {
-                            imageBytes[i] = new Integer(bytesReceivedFromCamera.get(i)).byteValue();
+                    pallet = new Pallet(newMsgData);
+                    pallet.setupDetectionParameters(imageParameters);
+                    dataToSave = new SerializedPalletDetails(newMsgData);
+                    dataToSave.setImageParameters(imageParameters);
+
+                } catch (Throwable t) {
+
+                    // received message is malformed
+                    logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
+
+                    if (!debugMode) {
+                        messageHandler.sendNak(newMsg);
+                    }
+
+                    palletDataOk = false;
+
+                }
+
+                try {
+
+                    if (palletDataOk) {
+
+                        // send an ack
+                        if (!debugMode) {
+                            messageHandler.sendAck(newMsg);
                         }
 
+                        // log pallet details
+                        logger.logAndPrint(PalletLogging.logSearchDetails(pallet));
+                        PalletLogging.logExpectedStacks(pallet, logger);
+
+                        byte[] imageBytes = new byte[imageParameters.getCameraPacketSizeBytes()];
+                        List<Integer> bytesReceivedFromCamera = new ArrayList<>();
                         if (!debugMode) {
-                            logger.logAndPrint("Image from IFM Camera Received");
+
+                            // connect to the camera and trigger an image
+                            TcpSendAndReceive tcpConnectToCamera = new TcpSendAndReceive(cameraIp,
+                                    cameraPort,
+                                    cameraTimeout,
+                                    cameraRetries,
+                                    lb,
+                                    "Tcp_IFM_Camera");
+
+                            logger.logAndPrint("Requesting Image from IFM Camera...");
+                            bytesReceivedFromCamera = tcpConnectToCamera.send(IFM_O3D301_CONNECTION_STRING,
+                                    imageParameters.getCameraPacketSizeBytes());
+
+                            pallet.setCameraByteArray(bytesReceivedFromCamera);
+                            dataToSave.setCameraByteArray(bytesReceivedFromCamera);
+
                         } else {
-                            logger.logAndPrint("Image Read from Data File");
-                        }
-                        imageReceived = true;
-
-                    } else {
-
-                        logger.logAndPrint("Incorrect byte count from IFM camera. Expected: "
-                                + ip.getCameraPacketSizeBytes()
-                                + " - Received: "
-                                + byteArraySizeFromCamera);
-
-                        // fill image with invalid data
-                        for (int i = 0; i < ip.getCameraPacketSizeBytes(); i++) {
-                            imageBytes[i] = INVALID_DATA;
+                            // set camera bytes from data file
+                            pallet.setCameraByteArray(dataFromFile.getCameraByteArray());
+                            bytesReceivedFromCamera = dataFromFile.getCameraByteArray();
                         }
 
-                        pallet.setAlarm(PalletAlarm.CAMERA_TIMEOUT);
+                        int byteArraySizeFromCamera = pallet.getCameraByteArray().size();
 
-                    }
+                        // if the correct amount of bytes were received from the camera
+                        if (byteArraySizeFromCamera == imageParameters.getCameraPacketSizeBytes()) {
+                            for (int i = 0; i < imageParameters.getCameraPacketSizeBytes(); i++) {
+                                imageBytes[i] = new Integer(bytesReceivedFromCamera.get(i)).byteValue();
+                            }
 
-                    // if an image wasn't received, skip over the image algorithm
-                    if (imageReceived) {
+                            if (!debugMode) {
+                                logger.logAndPrint("Image from IFM Camera Received");
+                            } else {
+                                logger.logAndPrint("Image Read from Data File");
+                            }
+                            imageReceived = true;
 
-                        // start a timer to measure the image algorithm
-                        TaskTimer palletImaging = new TaskTimer(("Pallet Imaging"));
+                        } else {
 
-                        pallet.setOriginalImage(ImageProcessing.convertByteArrayTo2DIntArray(imageBytes,
-                                ip.getCameraResolution_x(),
-                                ip.getCameraResolution_y(),
-                                ip.getImageDataOffsetBytes(),
-                                ip.isFlipImageHorizontally(),
-                                ip.getMinAcceptableDistanceFromCamera(),
-                                ip.getFloorDistanceFromCamera()));
+                            logger.logAndPrint("Incorrect byte count from IFM camera. Expected: "
+                                    + imageParameters.getCameraPacketSizeBytes()
+                                    + " - Received: "
+                                    + byteArraySizeFromCamera);
 
-                        logger.logAndPrint("1D -> 2D Mapping Done");
+                            // fill image with invalid data
+                            for (int i = 0; i < imageParameters.getCameraPacketSizeBytes(); i++) {
+                                imageBytes[i] = INVALID_DATA;
+                            }
 
-                        pallet.setFilteredAndCorrectedImage(Clone.deepClone(pallet.getOriginalImage()));
+                            pallet.setAlarm(PalletAlarm.CAMERA_TIMEOUT);
 
-                        // filter the original image and flatten it in a boolean image
-                        ImageProcessing.filterImageAndConvertToBoolArray(pallet);
-                        logger.logAndPrint("Image Filtering Done");
+                        }
 
-                        // detect edges in the filtered image
-                        ImageProcessing.edgeDetection(pallet);
-                        logger.logAndPrint("Edge Detection Done");
+                        // if an image wasn't received, skip over the image algorithm
+                        if (imageReceived) {
 
-                        // run the hough transform
-                        ImageProcessing.parallelHoughTransform(pallet, threadsToUse);
-                        logger.logAndPrint("Hough Transform Done");
+                            // start a timer to measure the image algorithm
+                            TaskTimer palletImaging = new TaskTimer(("Pallet Imaging"));
 
-                        // look for stacks from the hough data
-                        ImageProcessing.findStacks(pallet);
-                        logger.logAndPrint("Finding Stacks Done");
-                        PalletLogging.logSuspectedStacks(pallet, logger);
+                            pallet.setOriginalImage(ImageProcessing.convertByteArrayTo2DIntArray(imageBytes,
+                                    imageParameters.getCameraResolution_x(),
+                                    imageParameters.getCameraResolution_y(),
+                                    imageParameters.getImageDataOffsetBytes(),
+                                    imageParameters.isFlipImageHorizontally(),
+                                    imageParameters.getMinAcceptableDistanceFromCamera(),
+                                    imageParameters.getFloorDistanceFromCamera(),
+                                    imageParameters.getMaxAcceptableDistanceBelowFloor()));
 
-                        // match the suspected stacks to the expected stacks
-                        ImageProcessing.matchStacks(pallet);
-                        logger.logAndPrint("Matching Stacks Done");
-                        PalletLogging.logMatchedStacks(pallet, logger);
-                        PalletLogging.logUnMatchedStacks(pallet, logger);
+                            logger.logAndPrint("1D -> 2D Mapping Done");
 
-                        // calculate the actual stack positions with respect to the pallet
-                        ImageProcessing.calculateRealStackPositions(pallet);
-                        logger.logAndPrint("Calculated Stack Positions");
-                        PalletLogging.logFinalStacks(pallet, logger);
-                        PalletLogging.algoStats(pallet, threadsToUse, palletImaging, logger);
+                            pallet.setFilteredAndCorrectedImage(Clone.deepClone(pallet.getOriginalImage()));
 
-                    }
+                            // filter the original image and flatten it in a boolean image
+                            ImageProcessing.filterImageAndConvertToBoolArray(pallet);
+                            logger.logAndPrint("Image Filtering Done");
 
-                    if (!debugMode) {
-                        // send the response message -- check the ACK queue for messages with the same message id
-                        int msgId = messageHandler.determineNextMsgId(pallet.getMsgId());
-                        pallet.setMsgId(msgId);
-                        messageHandler.sendMessage(pallet.toString(), msgId);
-                    }
+                            // detect edges in the filtered image
+                            ImageProcessing.edgeDetection(pallet);
+                            logger.logAndPrint("Edge Detection Done");
 
+                            // run the hough transform
+                            ImageProcessing.parallelHoughTransform(pallet, threadsToUse);
+                            logger.logAndPrint("Hough Transform Done");
 
-                    // saving images
-                    if (imageReceived) {
-                        logger.logAndPrint("Saving Images...");
-                        String imagePath = path + IMAGE_PATH;
-                        PalletDataFiles palletDataFiles = new PalletDataFiles(imagesToKeep, imagePath, pallet.getTrackingNumber());
-                        palletDataFiles.createBitmap(pallet.getOriginalImage(), "Original", false);
-                        palletDataFiles.createBitmap(pallet.getBoolImage(), "Filtered");
-                        palletDataFiles.createBitmap(pallet.getEdgeImage(), "Edge");
-                        palletDataFiles.mergeLayersAndCreateBitmap(pallet.getHoughLayers(), "Hough");
-                        palletDataFiles.drawHoughCirclesOnOriginal(pallet, "HoughResult");
-                        logger.logAndPrint("Images Saved");
+                            // look for stacks from the hough data
+                            ImageProcessing.findStacks(pallet);
+                            logger.logAndPrint("Finding Stacks Done");
+                            PalletLogging.logSuspectedStacks(pallet, logger);
+
+                            // match the suspected stacks to the expected stacks
+                            ImageProcessing.matchStacks(pallet);
+                            logger.logAndPrint("Matching Stacks Done");
+                            PalletLogging.logMatchedStacks(pallet, logger);
+                            PalletLogging.logUnMatchedStacks(pallet, logger);
+
+                            // calculate the actual stack positions with respect to the pallet
+                            ImageProcessing.calculateRealStackPositions(pallet);
+                            logger.logAndPrint("Calculated Stack Positions");
+                            PalletLogging.logFinalStacks(pallet, logger);
+                            PalletLogging.algoStats(pallet, threadsToUse, palletImaging, logger);
+
+                        }
 
                         if (!debugMode) {
-                            palletDataFiles.saveSerializedData(dataToSave);
+                            // send the response message -- check the ACK queue for messages with the same message id
+                            int msgId = messageHandler.determineNextMsgId(pallet.getMsgId());
+                            pallet.setMsgId(msgId);
+                            messageHandler.sendMessage(pallet.toString(), msgId);
                         }
 
 
-                    }
-                }
+                        // saving images
+                        if (imageReceived) {
+                            logger.logAndPrint("Saving Images...");
+                            String imagePath = path + IMAGE_PATH;
+                            PalletDataFiles palletDataFiles = new PalletDataFiles(imagesToKeep, imagePath, pallet.getTrackingNumber());
+                            palletDataFiles.createBitmap(pallet.getOriginalImage(), "Original", false);
+                            palletDataFiles.createBitmap(pallet.getBoolImage(), "Filtered");
+                            palletDataFiles.createBitmap(pallet.getEdgeImage(), "Edge");
+                            palletDataFiles.mergeLayersAndCreateBitmap(pallet.getHoughLayers(), "Hough");
+                            palletDataFiles.drawHoughCirclesOnOriginal(pallet, "HoughResult");
+                            logger.logAndPrint("Images Saved");
 
-            } catch (Throwable t) {
-                logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
+                            if (!debugMode) {
+                                dataToSave.setTrackingNumber(pallet.getTrackingNumber());
+                                palletDataFiles.saveSerializedData(dataToSave);
+                            }
+
+
+                        }
+                    }
+
+                } catch (Throwable t) {
+                    logger.logAndPrint(ExceptionUtil.stackTraceToString(t));
+                }
             }
         }
         logger.logAndPrint("Shutting Down Application...");
