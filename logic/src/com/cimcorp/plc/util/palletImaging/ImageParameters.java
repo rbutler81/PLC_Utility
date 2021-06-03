@@ -59,6 +59,7 @@ public class ImageParameters implements Serializable {
     private String debugFilename;
     private boolean useDebugFileParams;
     private boolean extractIniAsFile;
+    private boolean extractImageAsFile;
     // error correction parameters
     private boolean errorCorrectionAverageMissingDataEnabled;
     private int errorCorrectionBlockSize;
@@ -115,6 +116,7 @@ public class ImageParameters implements Serializable {
         this.debugFilename = config.getSingleParamAsString("DebugFile");
         this.useDebugFileParams = config.getSingleParamAsBool("UseDebugFileParams");
         this.extractIniAsFile = config.getSingleParamAsBool("ExtractIniAsFile");
+        this.extractImageAsFile = config.getSingleParamAsBool("ExtractImageAsFile");
 
         this.flipImageHorizontally = config.getSingleParamAsBool("FlipImageHorizontally");
         this.acceptedSampleSuccessPercent = config.getSingleParamAsInt("AcceptedSampleSuccessPercent", 1, 100);
@@ -424,6 +426,10 @@ public class ImageParameters implements Serializable {
     public ImageParameters setIniFileAsStrings(List<String> iniFileAsStrings) {
         this.iniFileAsStrings = iniFileAsStrings;
         return this;
+    }
+
+    public boolean isExtractImageAsFile() {
+        return extractImageAsFile;
     }
 }
 

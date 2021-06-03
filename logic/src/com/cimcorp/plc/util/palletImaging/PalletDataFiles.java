@@ -22,7 +22,6 @@ public class PalletDataFiles {
     private static final int BLUE = 0x1919FF;
     private static final int RED = 0xFF2A00;
 
-
     private int imagesToKeep;
     private String path;
     private int trackingNumber = -1;
@@ -343,14 +342,41 @@ public class PalletDataFiles {
 
     }
 
-    public static SerializedPalletDetails readSerializedData(String fileName) throws IOException, ClassNotFoundException {
+    public void saveCameraPacket(SerializedPalletDetails data) throws IOException {
+
+        String fileName = data.getPalletMessage().replace(":","_");
+        File cameraPacket = getFile(fileName, "bin");
+
+        FileOutputStream fileOut = new FileOutputStream(cameraPacket.toString());
+        ObjectOutputStream out = new ObjectOutputStream(fileOut);
+        out.writeObject(data.getCameraByteArray());
+        out.close();
+        fileOut.close();
+
+    }
+
+    public static <T> T readSerializedData(String fileName) throws IOException, ClassNotFoundException {
 
         FileInputStream fileIn = new FileInputStream(fileName);
         ObjectInputStream in = new ObjectInputStream(fileIn);
-        SerializedPalletDetails toReturn = (SerializedPalletDetails) in.readObject();
+        T toReturn = (T) in.readObject();
         in.close();
         fileIn.close();
         return toReturn;
+
+    }
+
+    public static SerializedPalletDetails readCameraPacket(String path, String filename) throws IOException, ClassNotFoundException {
+
+        String creationString = filename.replace("_",":");
+        creationString = creationString.replace(".bin","");
+
+        List<Integer> cameraPacket = readSerializedData(path + filename);
+
+        SerializedPalletDetails spd = new SerializedPalletDetails(creationString);
+        spd.setCameraByteArray(cameraPacket);
+
+        return spd;
 
     }
 
