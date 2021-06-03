@@ -12,11 +12,10 @@ import com.cimcorp.misc.helpers.ApplicationSegment;
 import com.cimcorp.misc.helpers.Clone;
 import com.cimcorp.misc.helpers.ExceptionUtil;
 import com.cimcorp.misc.helpers.TaskTimer;
-import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,11 +31,11 @@ public class PalletImageRecognition extends ApplicationSegment {
     static final int USE_PHYSICAL_MACHINE_CORES_MAX = 99;
     static final String IFM_O3D301_CONNECTION_STRING = "1001L000000008\r\n1001T?\r\n";
 
-    private String path;
-    private String iniFileName;
+    private final String path;
+    private final String iniFileName;
     private ImageParameters imageParameters;
-    private int imagesToKeep;
-    private int threadsToUse;
+    private final int imagesToKeep;
+    private final int threadsToUse;
     private boolean debugMode;
     private boolean extractAndSaveIniFile;
     private SerializedPalletDetails dataFromFile;
@@ -337,7 +336,6 @@ public class PalletImageRecognition extends ApplicationSegment {
                             messageHandler.sendMessage(pallet.toString(), msgId);
                         }
 
-
                         // saving images
                         if (imageReceived) {
                             logger.logAndPrint("Saving Images...");
@@ -347,15 +345,13 @@ public class PalletImageRecognition extends ApplicationSegment {
                             palletDataFiles.createBitmap(pallet.getBoolImage(), "Filtered");
                             palletDataFiles.createBitmap(pallet.getEdgeImage(), "Edge");
                             palletDataFiles.mergeLayersAndCreateBitmap(pallet.getHoughLayers(), "Hough");
-                            palletDataFiles.drawHoughCirclesOnOriginal(pallet, "HoughResult");
+                            palletDataFiles.drawHoughCirclesOnOriginal(pallet, "Result");
                             logger.logAndPrint("Images Saved");
 
                             if (!debugMode) {
                                 dataToSave.setTrackingNumber(pallet.getTrackingNumber());
                                 palletDataFiles.saveSerializedData(dataToSave);
                             }
-
-
                         }
                     }
 
@@ -368,56 +364,4 @@ public class PalletImageRecognition extends ApplicationSegment {
         logger.stop();
     }
 
-    private byte[] readCameraPacketFromFile(String filename) {
-
-        String cameraPacketString = "";
-
-        try {
-            BufferedReader br = new BufferedReader(new FileReader(filename));
-
-            cameraPacketString = br.readLine();
-
-            String line = "";
-            while (line != null) {
-                line = br.readLine();
-                if (line != null) {
-                    cameraPacketString = cameraPacketString + line;
-                }
-            }
-            } catch (Throwable t) {
-
-            }
-
-        String[] hexArray = cameraPacketString.split(" ");
-        List<byte[]> bytes = new ArrayList<>();
-        for (String s: hexArray) {
-            bytes.add(HexBin.decode(s));
-        }
-
-        byte[] r = new byte[bytes.size()];
-        for (int i = 0; i < bytes.size(); i++) {
-            r[i] = bytes.get(i)[0];
-        }
-
-        return r;
-    }
-
-    private void fakeCameraPhoto(Pallet pallet, String filename) {
-        BufferedImage img = null;
-        try {
-            img = ImageIO.read(new File(filename));
-        } catch (IOException e) {
-        }
-
-        for (int y = 0; y < 264; y++) {
-            for (int x = 0; x < 352; x++) {
-                int value = img.getRGB(x,y);
-                if (value == -1) {
-                    pallet.getOriginalImage()[y][x] = 1;
-                } else {
-                    pallet.getOriginalImage()[y][x] = 3460;
-                }
-            }
-        }
-    }
 }
