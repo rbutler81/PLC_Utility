@@ -9,7 +9,7 @@ public class RadiusAndValue implements Serializable {
 
     private int radius;
     private int value;
-    private ReentrantLock lock = new ReentrantLock(true);
+    private ReentrantLock lock = new ReentrantLock(false);
 
     public RadiusAndValue() {
         this.radius = 0;

@@ -12,7 +12,7 @@ import java.util.List;
 
 public class ImageParameters implements Serializable {
 
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 3L;
 
     // ini file as a list of strings
     private List<String> iniFileAsStrings = new ArrayList<>();
@@ -60,6 +60,8 @@ public class ImageParameters implements Serializable {
     private boolean useDebugFileParams;
     private boolean extractIniAsFile;
     private boolean extractImageAsFile;
+    private boolean loadImageFile;
+    private String imageFile;
     // error correction parameters
     private boolean errorCorrectionAverageMissingDataEnabled;
     private int errorCorrectionBlockSize;
@@ -76,6 +78,12 @@ public class ImageParameters implements Serializable {
     private Polynomial errorCorrectionQuadrant3yCoefficients;
     private Polynomial errorCorrectionQuadrant4xCoefficients;
     private Polynomial errorCorrectionQuadrant4yCoefficients;
+
+    private boolean postDetectionEnabled;
+    private int postHeight;
+    private int postHeightDeviation;
+    private int postSampleSuccessRate;
+    private List<Square> postAreas = new ArrayList<>();
 
     // calculated parameters
     private int houghThetaIncrement;
@@ -117,6 +125,8 @@ public class ImageParameters implements Serializable {
         this.useDebugFileParams = config.getSingleParamAsBool("UseDebugFileParams");
         this.extractIniAsFile = config.getSingleParamAsBool("ExtractIniAsFile");
         this.extractImageAsFile = config.getSingleParamAsBool("ExtractImageAsFile");
+        this.imageFile = config.getSingleParamAsString("ImageFile");
+        this.loadImageFile = config.getSingleParamAsBool("LoadImageFile");
 
         this.flipImageHorizontally = config.getSingleParamAsBool("FlipImageHorizontally");
         this.acceptedSampleSuccessPercent = config.getSingleParamAsInt("AcceptedSampleSuccessPercent", 1, 100);
@@ -125,46 +135,37 @@ public class ImageParameters implements Serializable {
 
         this.cropImageEnable = config.getSingleParamAsBool("CropImageEnable");
         if (this.cropImageEnable) {
+
             List<String> topLeftPixels = config.getParam("TopLeftPixel");
             List<String> bottomRightPixels = config.getParam("BottomRightPixel");
-            // check values to make sure they define a box
-            int topLeft_x = Integer.parseInt(topLeftPixels.get(0));
-            int bottomRight_x = Integer.parseInt(bottomRightPixels.get(0));
-            int topLeft_y = Integer.parseInt(topLeftPixels.get(1));
-            int bottomRight_y = Integer.parseInt(bottomRightPixels.get(1));
+            Square croppedArea = new Square(Integer.parseInt(topLeftPixels.get(0)),
+                    Integer.parseInt(topLeftPixels.get(1)),
+                    Integer.parseInt(bottomRightPixels.get(0)),
+                    Integer.parseInt(bottomRightPixels.get(1)),
+                    this.cameraResolution_x,
+                    this.cameraResolution_y);
+            this.cropTopLeft_x = croppedArea.topLeft_x;
+            this.cropBottomRight_x = croppedArea.getBottomRightBoundary_x();
+            this.cropTopLeft_y = croppedArea.topLeft_y;
+            this.cropBottomRight_y = croppedArea.bottomRight_y;
 
-            if (valIsBetween(0,topLeft_x,cameraResolution_x)) {
-                if (valIsBetween(topLeft_x+1,bottomRight_x,cameraResolution_x)) {
-                    // x values are ok
-                    if (valIsBetween(0,topLeft_y,cameraResolution_y)) {
-                        if (valIsBetween(topLeft_y+1,bottomRight_y,cameraResolution_y)) {
-                            // all values are ok
-                            this.cropTopLeft_x = topLeft_x;
-                            this.cropBottomRight_x = bottomRight_x;
-                            this.cropTopLeft_y = topLeft_y;
-                            this.cropBottomRight_y = bottomRight_y;
-                        } else {
-                            // second y value is not ok
-                            throw new ValueOutOfRangeException("BottomRightCrop_y",bottomRight_y,topLeft_y+1,cameraResolution_y);
-                        }
-                    } else {
-                        // first y value is not ok
-                        throw new ValueOutOfRangeException("TopLeftCrop_y",topLeft_y,0,cameraResolution_y);
-                    }
-                } else {
-                    // second x value is not ok
-                    throw new ValueOutOfRangeException("BottomRightCrop_x",bottomRight_x,topLeft_x+1,cameraResolution_x);
-                }
-            } else {
-                // first x value is not ok
-                throw new ValueOutOfRangeException("TopLeftCrop_x",topLeft_x,0,cameraResolution_x);
-            }
          } else {
             // set cropping region to the entire image
             this.cropTopLeft_x = 0;
             this.cropBottomRight_x = cameraResolution_x;
             this.cropTopLeft_y = 0;
             this.cropBottomRight_y = cameraResolution_y;
+        }
+
+        this.postDetectionEnabled = config.getSingleParamAsBool("PostDetectionEnabled");
+        if (this.postDetectionEnabled) {
+
+            this.postHeight = config.getSingleParamAsInt("PostHeight");
+            this.postHeightDeviation = config.getSingleParamAsInt("PostHeightDeviation");
+            this.postSampleSuccessRate = config.getSingleParamAsInt("PostSampleSuccessRate");
+
+            checkAndSetPostAreas(config);
+
         }
 
         this.threadsToUse = config.getSingleParamAsInt("ThreadsToUse", 1, 99);
@@ -196,6 +197,26 @@ public class ImageParameters implements Serializable {
         this.houghThetaIncrement = BigDecimalMath.divide(360, houghCirclePoints);
         this.sampleThetaIncrement = BigDecimalMath.divide(360, tireSamplePoints);
 
+
+    }
+
+    private void checkAndSetPostAreas(Config config) throws ValueOutOfRangeException {
+
+        for (int i = 1; i <= 4; i++) {
+
+            String topLeft = "Post" + i + "_TopLeftPixel";
+            String bottomRight = "Post" + i + "_BottomRightPixel";
+
+            Square postArea = new Square(
+                    Integer.parseInt(config.getParam(topLeft).get(0)),
+                    Integer.parseInt(config.getParam(topLeft).get(1)),
+                    Integer.parseInt(config.getParam(bottomRight).get(0)),
+                    Integer.parseInt(config.getParam(bottomRight).get(1)),
+                    this.cameraResolution_x,
+                    this.cameraResolution_y);
+
+            postAreas.add(postArea);
+        }
 
     }
 
@@ -430,6 +451,34 @@ public class ImageParameters implements Serializable {
 
     public boolean isExtractImageAsFile() {
         return extractImageAsFile;
+    }
+
+    public boolean isLoadImageFile() {
+        return loadImageFile;
+    }
+
+    public String getImageFile() {
+        return imageFile;
+    }
+
+    public int getPostHeight() {
+        return postHeight;
+    }
+
+    public int getPostHeightDeviation() {
+        return postHeightDeviation;
+    }
+
+    public int getPostSampleSuccessRate() {
+        return postSampleSuccessRate;
+    }
+
+    public List<Square> getPostAreas() {
+        return postAreas;
+    }
+
+    public boolean isPostDetectionEnabled() {
+        return postDetectionEnabled;
     }
 }
 

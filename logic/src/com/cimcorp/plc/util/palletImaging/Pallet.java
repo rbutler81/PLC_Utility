@@ -13,7 +13,7 @@ import java.util.List;
 
 public class Pallet implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     private int msgId;
     private int trackingNumber;
@@ -27,7 +27,7 @@ public class Pallet implements Serializable {
     private List<SuspectedStack> unmatchedStacks = new ArrayList<>();
     private PalletAlarm alarm = PalletAlarm.NO_ALARM;
     // algorithm parameters
-    private ImageParameters ip;
+    private ImageParameters imageParameters;
     private BigDecimal odRadius;
     private BigDecimal swDeviation;
     private int fromRadiusPixels;
@@ -38,6 +38,7 @@ public class Pallet implements Serializable {
     private int edgePixels = 0;
     private List<Integer> uniqueStackHeights = new ArrayList<>();
     private MeanStandardDeviation houghMeanAndStdDeviation = new MeanStandardDeviation();
+    private List<Post> detectedPosts = new ArrayList<>();
     // Images
     private List<Integer> cameraByteArray;
     private int[][] originalImage;
@@ -103,7 +104,7 @@ public class Pallet implements Serializable {
 
     public void setupDetectionParameters(ImageParameters ip) {
 
-        this.ip = ip;
+        this.imageParameters = ip;
 
         odRadius = BigDecimalMath.divide(od,2,1);
         swDeviation = BigDecimalMath.multiply(sw, ip.getSearchForRadiusDeviation());
@@ -195,8 +196,8 @@ public class Pallet implements Serializable {
         return expectedStacks;
     }
 
-    public ImageParameters getIp() {
-        return ip;
+    public ImageParameters getImageParameters() {
+        return imageParameters;
     }
 
     public BigDecimal getOdRadius() {
@@ -428,5 +429,9 @@ public class Pallet implements Serializable {
     public Pallet setCameraByteArray(List<Integer> cameraByteArray) {
         this.cameraByteArray = cameraByteArray;
         return this;
+    }
+
+    public List<Post> getDetectedPosts() {
+        return detectedPosts;
     }
 }

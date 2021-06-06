@@ -85,7 +85,7 @@ public class PalletLogging {
                         + kVPToString("y_px", stack.getyPixel())
                         + kVPToString("x_UnadjustedDistanceToCenterOfFrame_mm", stack.getxDistanceFromCenter_mm(), 2)
                         + kVPToString("y_UnadjustedDistanceToCenterOfFrame_mm", stack.getyDistanceFromCenter_mm(), 2);
-                if (p.getIp().isErrorCorrectionSkewAdjustmentEnabled()) {
+                if (p.getImageParameters().isErrorCorrectionSkewAdjustmentEnabled()) {
                     r = r
                             + kVPToString("x_AdjustedDistanceToCenterOfFrame_mm", stack.getxDistanceFromCenterAdjusted_mm(), 2)
                             + kVPToString("y_AdjustedDistanceToCenterOfFrame_mm", stack.getyDistanceFromCenterAdjusted_mm(), 2);
@@ -111,8 +111,8 @@ public class PalletLogging {
             + kVPToString("EdgePixels", edgePixels);
 
         if (edgePixels > 0) {
-            int xRes = p.getIp().getCameraResolution_x();
-            int yRes = p.getIp().getCameraResolution_y();
+            int xRes = p.getImageParameters().getCameraResolution_x();
+            int yRes = p.getImageParameters().getCameraResolution_y();
             int pixelsInImage = xRes * yRes;
             BigDecimal edgePixelsAsPercentBd = new BigDecimal(edgePixels).setScale(10,RoundingMode.HALF_UP)
                     .divide(new BigDecimal(pixelsInImage),10,RoundingMode.HALF_UP)
@@ -142,6 +142,17 @@ public class PalletLogging {
         }
 
         logger.logAndPrint(r);
+
+    }
+
+    public static void postsDetected(Pallet p, Logger logger) {
+
+        for (Post post: p.getDetectedPosts()) {
+            String r = "Post Detected ";
+            r = r
+                + kVPToString("SampleSuccessRate",post.getSampleSuccessRate().longValue());
+            logger.logAndPrint(r);
+        }
 
     }
 

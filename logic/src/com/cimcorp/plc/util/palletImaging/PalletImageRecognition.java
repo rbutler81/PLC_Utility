@@ -39,6 +39,7 @@ public class PalletImageRecognition extends ApplicationSegment {
     private boolean debugMode;
     private boolean extractAndSaveIniFile;
     private boolean extractImageAsFile;
+    private boolean loadImageFile;
     private SerializedPalletDetails dataFromFile;
     private SerializedPalletDetails dataToSave;
 
@@ -56,8 +57,10 @@ public class PalletImageRecognition extends ApplicationSegment {
 
         // check for debug mode
         this.debugMode = imageParameters.isDebugEnabled();
-        this.extractAndSaveIniFile = imageParameters.isExtractIniAsFile() && debugMode;
+        this.loadImageFile = imageParameters.isLoadImageFile() && debugMode;
+        this.extractAndSaveIniFile = imageParameters.isExtractIniAsFile() && !loadImageFile && debugMode;
         this.extractImageAsFile = imageParameters.isExtractImageAsFile() && debugMode && !extractAndSaveIniFile;
+
 
         if (debugMode) {
             logger.logAndPrint("*** Debug Mode Enabled ***");
@@ -75,39 +78,52 @@ public class PalletImageRecognition extends ApplicationSegment {
 
     private void setupDebugMode() throws IOException, ClassNotFoundException {
 
-        File data = new File(path + imageParameters.getDebugFilename());
+        // load an image file, craete a SerializedPalletDetails class to be used in the rest of the program
+        if (loadImageFile) {
 
-        if (!data.exists()) {
-            throw new FileNotFoundException(data.toString());
+            File image = new File(path + imageParameters.getImageFile());
+
+            if (!image.exists()) {
+                throw new FileNotFoundException(image.toString());
+            }
+
+            logger.logAndPrint("Reading Image from " + imageParameters.getImageFile() + "...");
+            dataFromFile = PalletDataFiles.readCameraPacket(path, imageParameters.getImageFile());
+            dataFromFile.setImageParameters(imageParameters);
+
+        // if not loading an image, check the other debug parameters
         } else {
+            File data = new File(path + imageParameters.getDebugFilename());
 
-            logger.logAndPrint("Reading " + imageParameters.getDebugFilename() + "...");
-            dataFromFile = PalletDataFiles.readSerializedData(data.toString());
-
-            PalletDataFiles.readCameraPacket(path,"{msg_9452}{TN_9452}{OD_775}{ID_438}{SW_265}{n1_5}{n2_5}{n3_5}{n4_5}{n5_0}.bin");
-
-            // extract the ini from the data file and save it to disk -- ends program when complete
-            if (extractAndSaveIniFile) {
-
-                extractAndSaveIniFile();
-
-            // extract the camera packet from the data file and save it to disk -- ends program when complete
-            } else if (extractImageAsFile) {
-
-                extractImageAsFile();
-
-            // decide whether to run the algorithm using the ini in the data file, or the ini saved in the program folder
+            if (!data.exists()) {
+                throw new FileNotFoundException(data.toString());
             } else {
 
-                if (imageParameters.useDebugFileParams()) {
-                    logger.logAndPrint("Using Parameters from " + imageParameters.getDebugFilename());
-                    imageParameters = dataFromFile.getImageParameters();
+                logger.logAndPrint("Reading " + imageParameters.getDebugFilename() + "...");
+                dataFromFile = PalletDataFiles.readSerializedData(data.toString());
+
+                // extract the ini from the data file and save it to disk -- ends program when complete
+                if (extractAndSaveIniFile) {
+
+                    extractAndSaveIniFile();
+
+                    // extract the camera packet from the data file and save it to disk -- ends program when complete
+                } else if (extractImageAsFile) {
+
+                    extractImageAsFile();
+
+                    // decide whether to run the algorithm using the ini in the data file, or the ini saved in the program folder
                 } else {
-                    logger.logAndPrint("Using Parameters from INI file");
+
+                    if (imageParameters.useDebugFileParams()) {
+                        logger.logAndPrint("Using Parameters from " + imageParameters.getDebugFilename());
+                        imageParameters = dataFromFile.getImageParameters();
+                    } else {
+                        logger.logAndPrint("Using Parameters from INI file");
+                    }
                 }
             }
         }
-
     }
 
     private void extractImageAsFile() throws IOException {
@@ -260,6 +276,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                         } else {
                             // set camera bytes from data file
                             pallet.setCameraByteArray(dataFromFile.getCameraByteArray());
+                            dataToSave.setCameraByteArray(dataFromFile.getCameraByteArray());
                             bytesReceivedFromCamera = dataFromFile.getCameraByteArray();
                         }
 
@@ -342,6 +359,16 @@ public class PalletImageRecognition extends ApplicationSegment {
                             PalletLogging.logFinalStacks(pallet, logger);
                             PalletLogging.algoStats(pallet, threadsToUse, palletImaging, logger);
 
+                            // post detection
+                            if (pallet.getImageParameters().isPostDetectionEnabled()) {
+                                ImageProcessing.postDetection(pallet);
+
+                                if (pallet.getDetectedPosts().size() > 0) {
+                                    pallet.setAlarm(PalletAlarm.POST_DETECTED);
+                                    PalletLogging.postsDetected(pallet, logger);
+                                }
+                            }
+
                         }
 
                         if (!debugMode) {
@@ -360,10 +387,10 @@ public class PalletImageRecognition extends ApplicationSegment {
                             palletDataFiles.createBitmap(pallet.getBoolImage(), "Filtered");
                             palletDataFiles.createBitmap(pallet.getEdgeImage(), "Edge");
                             palletDataFiles.mergeLayersAndCreateBitmap(pallet.getHoughLayers(), "Hough");
-                            palletDataFiles.drawHoughCirclesOnOriginal(pallet, "Result");
+                            palletDataFiles.markupOriginalImage(pallet, "Result");
                             logger.logAndPrint("Images Saved");
 
-                            if (!debugMode) {
+                            if (!debugMode || loadImageFile) {
                                 dataToSave.setTrackingNumber(pallet.getTrackingNumber());
                                 palletDataFiles.saveSerializedData(dataToSave);
                             }

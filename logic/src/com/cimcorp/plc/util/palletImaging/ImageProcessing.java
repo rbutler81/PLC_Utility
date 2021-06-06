@@ -2,6 +2,7 @@ package com.cimcorp.plc.util.palletImaging;
 
 import com.cimcorp.communications.threads.Message;
 import com.cimcorp.misc.helpers.Clone;
+import com.cimcorp.misc.math.BigDecimalMath;
 import com.cimcorp.misc.math.MeanStandardDeviation;
 
 import java.math.BigDecimal;
@@ -56,67 +57,67 @@ public class ImageProcessing {
     public static void filterImageAndConvertToBoolArray(Pallet p) {
 
         // adjust the height thresholds if height error correction is enabled
-        if (p.getIp().isErrorCorrectionHeightAdjustmentEnabled()) {
+        if (p.getImageParameters().isErrorCorrectionHeightAdjustmentEnabled()) {
             // (diHeightThresholdMax_mm - ErrorFactor_b) / ErrorFactor_m
             MathContext mc = new MathContext(0,RoundingMode.HALF_UP);
             p.setHeightThresholdMin(new BigDecimal(p.getHeightThresholdMin(),mc)
-                                    .subtract(p.getIp().getErrorCorrectionHeightAdjustment_b())
-                                    .divide(p.getIp().getErrorCorrectionHeightAdjustment_m(),0,RoundingMode.HALF_UP)
+                                    .subtract(p.getImageParameters().getErrorCorrectionHeightAdjustment_b())
+                                    .divide(p.getImageParameters().getErrorCorrectionHeightAdjustment_m(),0,RoundingMode.HALF_UP)
                                     .intValue());
             p.setHeightThresholdMax(new BigDecimal(p.getHeightThresholdMax(),mc)
-                                    .subtract(p.getIp().getErrorCorrectionHeightAdjustment_b())
-                                    .divide(p.getIp().getErrorCorrectionHeightAdjustment_m(),0,RoundingMode.HALF_UP)
+                                    .subtract(p.getImageParameters().getErrorCorrectionHeightAdjustment_b())
+                                    .divide(p.getImageParameters().getErrorCorrectionHeightAdjustment_m(),0,RoundingMode.HALF_UP)
                                     .intValue());
         }
 
         // if the max threshold distance is lower than the pallet height, adjust it higher
-        if (p.getHeightThresholdMax() > (p.getIp().getFloorDistanceFromCamera() - p.getIp().getPalletHeightFromFloor())) {
-            p.setHeightThresholdMax(p.getIp().getFloorDistanceFromCamera() - p.getIp().getPalletHeightFromFloor() - 50);
+        if (p.getHeightThresholdMax() > (p.getImageParameters().getFloorDistanceFromCamera() - p.getImageParameters().getPalletHeightFromFloor())) {
+            p.setHeightThresholdMax(p.getImageParameters().getFloorDistanceFromCamera() - p.getImageParameters().getPalletHeightFromFloor() - 50);
         }
 
-        p.setBoolImage(new boolean[p.getIp().getCameraResolution_y()][p.getIp().getCameraResolution_x()]);
+        p.setBoolImage(new boolean[p.getImageParameters().getCameraResolution_y()][p.getImageParameters().getCameraResolution_x()]);
 
-        int topLeft_x = p.getIp().getCropTopLeft_x();
-        int topLeft_y = p.getIp().getCropTopLeft_y();
-        int bottomRight_x = p.getIp().getCropBottomRight_x();
-        int bottomRight_y = p.getIp().getCropBottomRight_y();
+        int topLeft_x = p.getImageParameters().getCropTopLeft_x();
+        int topLeft_y = p.getImageParameters().getCropTopLeft_y();
+        int bottomRight_x = p.getImageParameters().getCropBottomRight_x();
+        int bottomRight_y = p.getImageParameters().getCropBottomRight_y();
 
         // iterate through the raw data array and create the boolean image array
-        for (int y = 0; y < p.getIp().getCameraResolution_y(); y++) {
-            for (int x = 0; x < p.getIp().getCameraResolution_x(); x++) {
+        for (int y = 0; y < p.getImageParameters().getCameraResolution_y(); y++) {
+            for (int x = 0; x < p.getImageParameters().getCameraResolution_x(); x++) {
                 // check to make sure point is within the cropped area
                 if (valIsBetween(topLeft_x,x,bottomRight_x) && valIsBetween(topLeft_y,y,bottomRight_y)) {
 
                     // if missing data error correction is enabled find the average value in an area and 'fill in the holes'
-                    if (p.getIp().isErrorCorrectionAverageMissingDataEnabled() && (p.getOriginalImage()[y][x] == 0)) {
+                    if (p.getImageParameters().isErrorCorrectionAverageMissingDataEnabled() && (p.getOriginalImage()[y][x] == 0)) {
 
                         int xStart, xEnd, yStart, yEnd;
-                        int blockSize = p.getIp().getErrorCorrectionBlockSize();
+                        int blockSize = p.getImageParameters().getErrorCorrectionBlockSize();
                         boolean blockSizeIsEven = ((blockSize % 2) == 0);
 
                         if (blockSizeIsEven) {
 
                             xStart = x - (blockSize / 2);
                             xEnd = x + (blockSize / 2) - 1;
-                            xStart = limitInt(0, xStart, p.getIp().getCameraResolution_x() - 1);
-                            xEnd = limitInt(0, xEnd, p.getIp().getCameraResolution_x() - 1);
+                            xStart = limitInt(0, xStart, p.getImageParameters().getCameraResolution_x() - 1);
+                            xEnd = limitInt(0, xEnd, p.getImageParameters().getCameraResolution_x() - 1);
 
                             yStart = y - (blockSize / 2);
                             yEnd = y + (blockSize / 2) - 1;
-                            yStart = limitInt(0, yStart, p.getIp().getCameraResolution_y() - 1);
-                            yEnd = limitInt(0, yEnd, p.getIp().getCameraResolution_y() - 1);
+                            yStart = limitInt(0, yStart, p.getImageParameters().getCameraResolution_y() - 1);
+                            yEnd = limitInt(0, yEnd, p.getImageParameters().getCameraResolution_y() - 1);
 
                         } else {
 
                             xStart = x - (blockSize / 2);
                             xEnd = x + (blockSize / 2);
-                            xStart = limitInt(0, xStart, p.getIp().getCameraResolution_x() - 1);
-                            xEnd = limitInt(0, xEnd, p.getIp().getCameraResolution_x() - 1);
+                            xStart = limitInt(0, xStart, p.getImageParameters().getCameraResolution_x() - 1);
+                            xEnd = limitInt(0, xEnd, p.getImageParameters().getCameraResolution_x() - 1);
 
                             yStart = y - (blockSize / 2);
                             yEnd = y + (blockSize / 2);
-                            yStart = limitInt(0, yStart, p.getIp().getCameraResolution_y() - 1);
-                            yEnd = limitInt(0, yEnd, p.getIp().getCameraResolution_y() - 1);
+                            yStart = limitInt(0, yStart, p.getImageParameters().getCameraResolution_y() - 1);
+                            yEnd = limitInt(0, yEnd, p.getImageParameters().getCameraResolution_y() - 1);
 
                         }
 
@@ -151,8 +152,8 @@ public class ImageProcessing {
     public static void edgeDetection(Pallet p) {
 
         // detect the edges of the boolean image
-        int xRes = p.getIp().getCameraResolution_x();
-        int yRes = p.getIp().getCameraResolution_y();
+        int xRes = p.getImageParameters().getCameraResolution_x();
+        int yRes = p.getImageParameters().getCameraResolution_y();
         int edgePixels = 0;
         p.setEdgeImage(new boolean[yRes][xRes]);
 
@@ -179,15 +180,15 @@ public class ImageProcessing {
         // setup list of arrays to save hough images in
         List<int[][]> houghLayers = new ArrayList<>();
         // hough transform - find circles in the edge image
-        int xRes = p.getIp().getCameraResolution_x();
-        int yRes = p.getIp().getCameraResolution_y();
+        int xRes = p.getImageParameters().getCameraResolution_x();
+        int yRes = p.getImageParameters().getCameraResolution_y();
         p.setHoughRunningAccumulator(RadiusAndValue.createTwoDimensionalArray(xRes, yRes));
 
         for (int r = p.getFromRadiusPixels(); r <= p.getToRadiusPixels(); r++) {
 
             int[][] houghAccumulator = oneRadiusHoughIteration(p.getEdgeImage(),
                     r,
-                    p.getIp().getHoughThetaIncrement(),
+                    p.getImageParameters().getHoughThetaIncrement(),
                     p.getHoughRunningAccumulator());
 
             // before moving to the next radius, compare the hough array to the hough accumulator array and update the largest values found
@@ -284,8 +285,8 @@ public class ImageProcessing {
         // The highest values will correspond to the center of the tire stacks
         int stackId = 0;
         int expectedStacks = p.getExpectedStackQty();
-        int xRes = p.getIp().getCameraResolution_x();
-        int yRes = p.getIp().getCameraResolution_y();
+        int xRes = p.getImageParameters().getCameraResolution_x();
+        int yRes = p.getImageParameters().getCameraResolution_y();
 
         for (int i = 0; i < expectedStacks; i++) {
 
@@ -316,14 +317,14 @@ public class ImageProcessing {
             for (int height: p.getUniqueStackHeights()) {
                 // take samples from the raw data array (around the center point found) to find the stack's measured value
                 //  - first, convert sample distance to a pixel value based on the calculated distance from camera
-                int distanceFromCamera = p.getIp().getFloorDistanceFromCamera() - p.getIp().getPalletHeightFromFloor() - height;
+                int distanceFromCamera = p.getImageParameters().getFloorDistanceFromCamera() - p.getImageParameters().getPalletHeightFromFloor() - height;
                 // (A_x * rRadius_mm) / (StackDistanceFromCamera_mm);
                 int samplePointFromCenterMm = p.getSampleDistanceFromCenter();
-                BigDecimal Ax = p.getIp().getCameraFactor_x();
+                BigDecimal Ax = p.getImageParameters().getCameraFactor_x();
                 int samplePointFromCenterPixels = Ax.multiply(new BigDecimal(samplePointFromCenterMm))
                                         .divide(new BigDecimal(distanceFromCamera),0,RoundingMode.HALF_UP).intValue();
 
-                int thetaIncrement = p.getIp().getSampleThetaIncrement();
+                int thetaIncrement = p.getImageParameters().getSampleThetaIncrement();
                 List<Integer> sampleArray = new ArrayList<>();
                 for (int theta = 0; theta < 360; theta = theta + thetaIncrement) {
 
@@ -356,22 +357,22 @@ public class ImageProcessing {
                     MeanStandardDeviation msd = new MeanStandardDeviation(sampleArray);
 
                     // Error adjustment for height
-                    if (p.getIp().isErrorCorrectionHeightAdjustmentEnabled()) {
+                    if (p.getImageParameters().isErrorCorrectionHeightAdjustmentEnabled()) {
                         // mx + b
-                        BigDecimal m = p.getIp().getErrorCorrectionHeightAdjustment_m();
-                        BigDecimal b = p.getIp().getErrorCorrectionHeightAdjustment_b();
+                        BigDecimal m = p.getImageParameters().getErrorCorrectionHeightAdjustment_m();
+                        BigDecimal b = p.getImageParameters().getErrorCorrectionHeightAdjustment_b();
                         BigDecimal adjustedMean = m.multiply(msd.getMean()).add(b);
                         msd.setMean(adjustedMean);
                     }
 
                     MeasuredStackData measuredStack = new MeasuredStackData();
-                    measuredStack.setSamples(p.getIp().getTireSamplePoints());
+                    measuredStack.setSamples(p.getImageParameters().getTireSamplePoints());
                     measuredStack.setSuccessfulSamples(sampleArray.size());
                     measuredStack.setMeasuredDistanceFromCamera(msd.getMean().setScale(0,RoundingMode.HALF_UP).intValue());
                     measuredStack.setStdDeviation(msd.getStdDeviation());
                     measuredStack.setMean(msd.getMean());
-                    measuredStack.setMeasuredStackHeight(p.getIp().getFloorDistanceFromCamera()
-                                                            - p.getIp().getPalletHeightFromFloor()
+                    measuredStack.setMeasuredStackHeight(p.getImageParameters().getFloorDistanceFromCamera()
+                                                            - p.getImageParameters().getPalletHeightFromFloor()
                                                             - measuredStack.getMeasuredDistanceFromCamera());
 
                     measuredStacks.add(measuredStack);
@@ -429,7 +430,7 @@ public class ImageProcessing {
                 SuspectedStack suspectedStack = p.getSuspectedStacks().remove(0);
                 Stack expectedStack = p.getExpectedStacks().get(i);
                 int deviation = p.getSwDeviation().setScale(0, RoundingMode.HALF_UP).intValue();
-                int acceptedSampleSuccessRate = p.getIp().getAcceptedSampleSuccessPercent();
+                int acceptedSampleSuccessRate = p.getImageParameters().getAcceptedSampleSuccessPercent();
                 int suspectedStackSampleSuccessRate = suspectedStack.getSampleSuccessRate().setScale(0, RoundingMode.HALF_UP).intValue();
 
                 if ((areStacksWithinDeviation(expectedStack, suspectedStack, deviation))
@@ -454,8 +455,8 @@ public class ImageProcessing {
 
     public static void calculateRealStackPositions(Pallet p) {
 
-        int xRes = p.getIp().getCameraResolution_x();
-        int yRes = p.getIp().getCameraResolution_y();
+        int xRes = p.getImageParameters().getCameraResolution_x();
+        int yRes = p.getImageParameters().getCameraResolution_y();
 
         List<Stack> expectedStacks = p.getExpectedStacks();
         for (Stack expectedStack: expectedStacks) {
@@ -467,8 +468,8 @@ public class ImageProcessing {
                 BigDecimal distanceFromCenterPixels_y = new BigDecimal((yRes / 2) - expectedStack.getyPixel())
                                                         .setScale(15, RoundingMode.HALF_UP);
                 BigDecimal stackDistanceFromCamera = expectedStack.getFromSuspectedStack().getMsd().getMean();
-                BigDecimal Ax = p.getIp().getCameraFactor_x().setScale(15,RoundingMode.HALF_UP);
-                BigDecimal Ay = p.getIp().getCameraFactor_y().setScale(15,RoundingMode.HALF_UP);
+                BigDecimal Ax = p.getImageParameters().getCameraFactor_x().setScale(15,RoundingMode.HALF_UP);
+                BigDecimal Ay = p.getImageParameters().getCameraFactor_y().setScale(15,RoundingMode.HALF_UP);
 
                 BigDecimal distanceFromCenterMm_x = distanceFromCenterPixels_x
                                                         .multiply(stackDistanceFromCamera)
@@ -487,34 +488,34 @@ public class ImageProcessing {
                 expectedStack.setyDistanceFromCenter_mm(distanceFromCenterMm_y);
 
                 // adjust for stack skew in image
-                if (p.getIp().isErrorCorrectionSkewAdjustmentEnabled()) {
+                if (p.getImageParameters().isErrorCorrectionSkewAdjustmentEnabled()) {
 
                     // quadrant 1
                     if ((distanceFromCenterMmInt_x >= 0) && (distanceFromCenterMmInt_y >= 0)) {
-                        distanceFromCenterMmCorrected_x = p.getIp().getErrorCorrectionQuadrant1xCoefficients()
+                        distanceFromCenterMmCorrected_x = p.getImageParameters().getErrorCorrectionQuadrant1xCoefficients()
                                 .calculateForX(distanceFromCenterMm_x);
-                        distanceFromCenterMmCorrected_y = p.getIp().getErrorCorrectionQuadrant1yCoefficients()
+                        distanceFromCenterMmCorrected_y = p.getImageParameters().getErrorCorrectionQuadrant1yCoefficients()
                                 .calculateForX(distanceFromCenterMm_y);
                     }
                     // quadrant 2
                     else if ((distanceFromCenterMmInt_x < 0) && (distanceFromCenterMmInt_y >= 0)) {
-                        distanceFromCenterMmCorrected_x = p.getIp().getErrorCorrectionQuadrant2xCoefficients()
+                        distanceFromCenterMmCorrected_x = p.getImageParameters().getErrorCorrectionQuadrant2xCoefficients()
                                 .calculateForX(distanceFromCenterMm_x);
-                        distanceFromCenterMmCorrected_y = p.getIp().getErrorCorrectionQuadrant2yCoefficients()
+                        distanceFromCenterMmCorrected_y = p.getImageParameters().getErrorCorrectionQuadrant2yCoefficients()
                                 .calculateForX(distanceFromCenterMm_y);
                     }
                     // quadrant 3
                     else if ((distanceFromCenterMmInt_x < 0) && (distanceFromCenterMmInt_y < 0)) {
-                        distanceFromCenterMmCorrected_x = p.getIp().getErrorCorrectionQuadrant3xCoefficients()
+                        distanceFromCenterMmCorrected_x = p.getImageParameters().getErrorCorrectionQuadrant3xCoefficients()
                                 .calculateForX(distanceFromCenterMm_x);
-                        distanceFromCenterMmCorrected_y = p.getIp().getErrorCorrectionQuadrant3yCoefficients()
+                        distanceFromCenterMmCorrected_y = p.getImageParameters().getErrorCorrectionQuadrant3yCoefficients()
                                 .calculateForX(distanceFromCenterMm_y);
                     }
                     // quadrant 4
                     else if ((distanceFromCenterMmInt_x >= 0) && (distanceFromCenterMmInt_y < 0)) {
-                        distanceFromCenterMmCorrected_x = p.getIp().getErrorCorrectionQuadrant4xCoefficients()
+                        distanceFromCenterMmCorrected_x = p.getImageParameters().getErrorCorrectionQuadrant4xCoefficients()
                                 .calculateForX(distanceFromCenterMm_x);
-                        distanceFromCenterMmCorrected_y = p.getIp().getErrorCorrectionQuadrant4yCoefficients()
+                        distanceFromCenterMmCorrected_y = p.getImageParameters().getErrorCorrectionQuadrant4yCoefficients()
                                 .calculateForX(distanceFromCenterMm_y);
                     }
                 }
@@ -522,10 +523,10 @@ public class ImageProcessing {
                 // calculate stack coordinates from pallet origin
                 int xDistance = 0;
                 int yDistance = 0;
-                int xCenterDistanceFromOrigin = p.getIp().getDistanceToCenterOfFrameFromPalletOriginMM_x();
-                int yCenterDistanceFromOrigin = p.getIp().getDistanceToCenterOfFrameFromPalletOriginMM_y();
+                int xCenterDistanceFromOrigin = p.getImageParameters().getDistanceToCenterOfFrameFromPalletOriginMM_x();
+                int yCenterDistanceFromOrigin = p.getImageParameters().getDistanceToCenterOfFrameFromPalletOriginMM_y();
 
-                if (p.getIp().isErrorCorrectionSkewAdjustmentEnabled()) {
+                if (p.getImageParameters().isErrorCorrectionSkewAdjustmentEnabled()) {
                     expectedStack.setxDistanceFromCenterAdjusted_mm(distanceFromCenterMmCorrected_x);
                     expectedStack.setyDistanceFromCenterAdjusted_mm(distanceFromCenterMmCorrected_y);
                     xDistance = distanceFromCenterMmCorrected_x
@@ -590,9 +591,9 @@ public class ImageProcessing {
 
         int radiusFrom = p.getFromRadiusPixels();
         int radiusTo = p.getToRadiusPixels();
-        int thetaIncrement = p.getIp().getHoughThetaIncrement();
-        int xRes = p.getIp().getCameraResolution_x();
-        int yRes = p.getIp().getCameraResolution_y();
+        int thetaIncrement = p.getImageParameters().getHoughThetaIncrement();
+        int xRes = p.getImageParameters().getCameraResolution_x();
+        int yRes = p.getImageParameters().getCameraResolution_y();
         RadiusAndValue[][] runningHoughAccumulator = RadiusAndValue.createTwoDimensionalArray(xRes, yRes);
 
         for (int radius = radiusFrom; radius <=radiusTo; radius++) {
@@ -606,7 +607,6 @@ public class ImageProcessing {
         List<HoughMessage> houghArrays = msg.removeAll();
         List<int[][]> arrays = new ArrayList<>();
         for (HoughMessage hm: houghArrays) {
-            // ImageProcessing.updateRunningAccumulator(runningHoughAccumulator, hm.getHoughArray(), hm.getRadius());
             arrays.add(hm.getHoughArray());
         }
         MeanStandardDeviation msd = ImageProcessing.calculateMeanAndStd(runningHoughAccumulator);
@@ -614,6 +614,51 @@ public class ImageProcessing {
         p.setHoughMeanAndStdDeviation(msd);
         p.setHoughRunningAccumulator(runningHoughAccumulator);
         p.setHoughLayers(arrays);
+
+    }
+
+    public static void postDetection(Pallet p) {
+
+        int upperSampleLimit = p.getImageParameters().getFloorDistanceFromCamera() -
+                (p.getImageParameters().getPalletHeightFromFloor() + p.getImageParameters().getPostHeight()
+                + p.getImageParameters().getPostHeightDeviation());
+        int lowerSampleLimit = p.getImageParameters().getFloorDistanceFromCamera() -
+                (p.getImageParameters().getPalletHeightFromFloor() + p.getImageParameters().getPostHeight()
+                - p.getImageParameters().getPostHeightDeviation());
+        BigDecimal testSampleRate = new BigDecimal(p.getImageParameters().getPostSampleSuccessRate());
+        for (Square s: p.getImageParameters().getPostAreas()) {
+
+            List<Integer> samples = new ArrayList<>();
+            int start_x = s.getTopLeftBoundary_x();
+            int end_x = s.getBottomRightBoundary_x();
+            int start_y = s.getTopLeftBoundary_y();
+            int end_y = s.getBottomRightBoundary_y();
+
+            for (int y = start_y; y <= end_y; y++) {
+                for (int x = start_x; x <= end_x; x++) {
+
+                    int point = p.getOriginalImage()[y][x];
+                    if (valIsBetween(upperSampleLimit,point,lowerSampleLimit)) {
+                        samples.add(point);
+                    }
+                }
+            }
+
+            MeanStandardDeviation msd = null;
+            if (samples.size() > 1) {
+                msd = new MeanStandardDeviation(samples);
+                BigDecimal sampleSuccessRate = new BigDecimal(samples.size()).setScale(2,BigDecimal.ROUND_HALF_UP)
+                        .divide(new BigDecimal(s.getPixels()),4, BigDecimal.ROUND_HALF_UP)
+                        .multiply(new BigDecimal(100)).setScale(2,BigDecimal.ROUND_HALF_UP);
+
+                // a post was found
+                if (BigDecimalMath.GEQ(sampleSuccessRate,testSampleRate)) {
+
+                    Post foundPost = new Post(s,msd,samples.size(),sampleSuccessRate);
+                    p.getDetectedPosts().add(foundPost);
+                }
+            }
+        }
 
     }
 

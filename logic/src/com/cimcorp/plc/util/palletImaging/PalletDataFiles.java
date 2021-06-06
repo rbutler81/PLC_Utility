@@ -1,6 +1,7 @@
 package com.cimcorp.plc.util.palletImaging;
 
 import com.cimcorp.misc.helpers.Clone;
+import com.cimcorp.misc.helpers.KeyValuePair;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -19,8 +20,11 @@ public class PalletDataFiles {
 
     private static final int STARTING_COLOUR = 0;
     private static final int LARGEST_COLOUR = 255;
-    private static final int BLUE = 0x1919FF;
+    private static final int GREEN = 0x00FF00;
     private static final int RED = 0xFF2A00;
+    private static final int BLUE = 0x1919FF;
+    private static final int SUCCESS_COLOUR = GREEN;
+    private static final int ERROR_COLOUR = RED;
 
     private int imagesToKeep;
     private String path;
@@ -244,7 +248,7 @@ public class PalletDataFiles {
         return scaledVal;
     }
 
-    public void drawHoughCirclesOnOriginal(Pallet p, String filename) throws IOException {
+    public void markupOriginalImage(Pallet p, String filename) throws IOException {
 
         int[][] originalImage = Clone.deepClone(p.getOriginalImage());
         BufferedImage img = getBufferedImage(originalImage,false);
@@ -257,7 +261,7 @@ public class PalletDataFiles {
 
             if (stack.isStackMatched()) {
 
-                int drawingColour = BLUE;
+                int drawingColour = SUCCESS_COLOUR;
                 int radius = stack.getFromSuspectedStack().getPixelRadius();
                 int xMiddleOfCircle = stack.getxPixel();
                 int yMiddleOfCircle = stack.getyPixel();
@@ -270,7 +274,7 @@ public class PalletDataFiles {
         // draw the unmatched stacks
         for (SuspectedStack stack: p.getUnmatchedStacks()) {
 
-            int drawingColour = RED;
+            int drawingColour = ERROR_COLOUR;
             int radius = stack.getPixelRadius();
             int xMiddleOfCircle = stack.getxPixel();
             int yMiddleOfCircle = stack.getyPixel();
@@ -279,7 +283,38 @@ public class PalletDataFiles {
 
         }
 
+        // if posts have been detected, draw the area they were found
+        if (p.getAlarm() == PalletAlarm.POST_DETECTED) {
+
+            for (Post post: p.getDetectedPosts()) {
+
+                int drawingColour = ERROR_COLOUR;
+                drawSquareOnImage(img, drawingColour, post.getArea());
+
+            }
+
+        }
+
         writeImageToDisk(filename, img);
+
+    }
+
+    private void drawSquareOnImage(BufferedImage img, int drawingColour, Square area) {
+
+        int start_x = area.getTopLeftBoundary_x();
+        int end_x = area.getBottomRightBoundary_x();
+        int start_y = area.getTopLeftBoundary_y();
+        int end_y = area.getBottomRightBoundary_y();
+
+        for (int y = start_y; y <= end_y; y++) {
+            for (int x = start_x; x <= end_x; x++) {
+
+                if ((y == start_y) || (y == end_y) || (x == start_x) || (x == end_x)) {
+                    img.setRGB(x, y, drawingColour);
+                }
+
+            }
+        }
 
     }
 
@@ -373,7 +408,10 @@ public class PalletDataFiles {
 
         List<Integer> cameraPacket = readSerializedData(path + filename);
 
+        String trackingNumber = KeyValuePair.stringContainsKeyPairInt(creationString, "TN", "@@@@");
+
         SerializedPalletDetails spd = new SerializedPalletDetails(creationString);
+        spd.setTrackingNumber(Integer.parseInt(trackingNumber));
         spd.setCameraByteArray(cameraPacket);
 
         return spd;
