@@ -148,9 +148,9 @@ public class PalletLogging {
     public static void postsDetected(Pallet p, Logger logger) {
 
         for (Post post: p.getDetectedPosts()) {
-            String r = "Post Detected ";
-            r = r
-                + kVPToString("SampleSuccessRate",post.getSampleSuccessRate().longValue());
+            String r = "Post Detected "
+                    + post.toString();
+
             logger.logAndPrint(r);
         }
 

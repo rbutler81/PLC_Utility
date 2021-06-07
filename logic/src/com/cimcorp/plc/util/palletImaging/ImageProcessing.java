@@ -626,6 +626,7 @@ public class ImageProcessing {
                 (p.getImageParameters().getPalletHeightFromFloor() + p.getImageParameters().getPostHeight()
                 - p.getImageParameters().getPostHeightDeviation());
         BigDecimal testSampleRate = new BigDecimal(p.getImageParameters().getPostSampleSuccessRate());
+
         for (Square s: p.getImageParameters().getPostAreas()) {
 
             List<Integer> samples = new ArrayList<>();
@@ -654,7 +655,11 @@ public class ImageProcessing {
                 // a post was found
                 if (BigDecimalMath.GEQ(sampleSuccessRate,testSampleRate)) {
 
-                    Post foundPost = new Post(s,msd,samples.size(),sampleSuccessRate);
+                    int postHeight = p.getImageParameters().getFloorDistanceFromCamera()
+                            - p.getImageParameters().getPalletHeightFromFloor()
+                            - msd.getMean().intValue();
+
+                    Post foundPost = new Post(s,msd,samples.size(),sampleSuccessRate, postHeight);
                     p.getDetectedPosts().add(foundPost);
                 }
             }
