@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ImageProcessing {
 
@@ -584,7 +585,7 @@ public class ImageProcessing {
 
     }
 
-    public static void parallelHoughTransform(Pallet p, int threads) {
+    public static void parallelHoughTransform(Pallet p, int threads) throws InterruptedException {
 
         Message<HoughMessage> msg = new Message<>();
         ExecutorService es = Executors.newFixedThreadPool(threads);
@@ -601,8 +602,7 @@ public class ImageProcessing {
             es.execute(new HoughWorkerThread(radius, thetaIncrement, edgeArray, msg, runningHoughAccumulator));
         }
         es.shutdown();
-
-        while (!es.isTerminated()) {}
+        es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
 
         List<HoughMessage> houghArrays = msg.removeAll();
         List<int[][]> arrays = new ArrayList<>();

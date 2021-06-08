@@ -13,11 +13,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
 
     // setup static variables
-    static final String VER = "2_20210607";
+    static final String VER = "2_20210608";
     public static final String PATH_SEPARATOR = File.separator;
     static final String PATH = Paths.get(".").toAbsolutePath().normalize().toString() + PATH_SEPARATOR;
     static final int MAX_APP_SEGMENTS = 2;
@@ -62,7 +63,12 @@ public class Main {
         }
         es.shutdown();
 
-        while (!es.isTerminated()) {}
+        try {
+            es.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            System.exit(10);
+        }
 
         System.exit(0);
     }
