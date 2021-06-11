@@ -78,7 +78,7 @@ public class PalletImageRecognition extends ApplicationSegment {
 
     private void setupDebugMode() throws IOException, ClassNotFoundException {
 
-        // load an image file, craete a SerializedPalletDetails class to be used in the rest of the program
+        // load an image file, create a SerializedPalletDetails class to be used in the rest of the program
         if (loadImageFile) {
 
             File image = new File(path + imageParameters.getImageFile());
@@ -208,6 +208,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                     if (!debugMode) {
 
                         // wait here until a new message arrives from the plc
+                        logger.logAndPrint("Waiting for next imaging task...");
                         messageHandler.getReceiveBufferFromRemote().waitUntilNotifiedOrListNotEmpty();
                         newMsg = messageHandler.getReceiveBufferFromRemote().getNextMsg();
 

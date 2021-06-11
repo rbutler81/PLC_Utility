@@ -58,7 +58,7 @@ public class PlcLogger extends ApplicationSegment {
         Thread udpServerThread = new Thread(udpServer, "PlcLoggerUdpListener");
         udpServerThread.start();
 
-        System.out.println(Thread.currentThread().getName() + " Enabled and Running");
+        System.out.println("Application Started -- PLC Logger Enabled and Running");
 
         while (true) {
 
