@@ -323,6 +323,7 @@ public class PalletImageRecognition extends ApplicationSegment {
                                     imageParameters.getCameraResolution_y(),
                                     imageParameters.getImageDataOffsetBytes(),
                                     imageParameters.isFlipImageHorizontally(),
+                                    imageParameters.isFlipImageVertically(),
                                     imageParameters.getMinAcceptableDistanceFromCamera(),
                                     imageParameters.getFloorDistanceFromCamera(),
                                     imageParameters.getMaxAcceptableDistanceBelowFloor()));

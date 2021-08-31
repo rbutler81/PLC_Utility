@@ -20,11 +20,12 @@ public class ImageProcessing {
     private static final int INVALID_DATA = -1;
     private static final int ERROR_DATA = 0;
 
-    public static int[][] convertByteArrayTo2DIntArray(byte[] inputArray, int xRes, int yRes, int startingOffset, boolean flipImageHorizontally, int minAcceptableDistance, int floorDistance, int maxAcceptableDistanceBelowFloor) {
+    public static int[][] convertByteArrayTo2DIntArray(byte[] inputArray, int xRes, int yRes, int startingOffset, boolean flipImageHorizontally, boolean flipImageVertically, int minAcceptableDistance, int floorDistance, int maxAcceptableDistanceBelowFloor) {
 
         int[][] outputArray = new int[yRes][xRes];
         int readPointer = startingOffset;
         int xAdjusted;
+        int yAdjusted;
 
         for (int y = 0; y < yRes; y++) {
             for (int x = 0; x < xRes; x++) {
@@ -33,6 +34,12 @@ public class ImageProcessing {
                     xAdjusted = xRes - 1 - x;
                 } else {
                     xAdjusted = x;
+                }
+
+                if (flipImageVertically) {
+                    yAdjusted = yRes - 1 - y;
+                } else {
+                    yAdjusted = y;
                 }
 
                 MathContext mc = new MathContext(0, RoundingMode.HALF_UP);
@@ -44,9 +51,9 @@ public class ImageProcessing {
 
                 if (((resultInt >= minAcceptableDistance) && (resultInt <= floorDistance + maxAcceptableDistanceBelowFloor))
                         || resultInt == ERROR_DATA) {
-                    outputArray[y][xAdjusted] = resultInt;
+                    outputArray[yAdjusted][xAdjusted] = resultInt;
                 } else {
-                    outputArray[y][xAdjusted] = INVALID_DATA;
+                    outputArray[yAdjusted][xAdjusted] = INVALID_DATA;
                 }
 
                 readPointer = readPointer + 2;
@@ -544,7 +551,7 @@ public class ImageProcessing {
                             .setScale(0,RoundingMode.HALF_UP)
                             .intValue();
                     yDistance = distanceFromCenterMm_y
-                            .add(new BigDecimal(xCenterDistanceFromOrigin))
+                            .add(new BigDecimal(yCenterDistanceFromOrigin))
                             .setScale(0,RoundingMode.HALF_UP)
                             .intValue();
                 }
@@ -581,7 +588,9 @@ public class ImageProcessing {
 
         int upperLimit = expectedStack.getExpectedHeight() + deviation;
         int lowerLimit = expectedStack.getExpectedHeight() - deviation;
-        return valIsBetween(lowerLimit, suspectedStack.getMeasuredHeight(), upperLimit);
+        int value = suspectedStack.getMeasuredHeight();
+        boolean result = valIsBetween(lowerLimit, value, upperLimit);
+        return result;
 
     }
 

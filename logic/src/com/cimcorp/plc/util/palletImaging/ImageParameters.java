@@ -45,6 +45,7 @@ public class ImageParameters implements Serializable {
     private int houghCirclePoints;
     private int tireSamplePoints;
     private boolean flipImageHorizontally;
+    private boolean flipImageVertically;
     private int acceptedSampleSuccessPercent;
     private int distanceToCenterOfFrameFromPalletOriginMM_x;
     private int distanceToCenterOfFrameFromPalletOriginMM_y;
@@ -129,6 +130,7 @@ public class ImageParameters implements Serializable {
         this.loadImageFile = config.getSingleParamAsBool("LoadImageFile");
 
         this.flipImageHorizontally = config.getSingleParamAsBool("FlipImageHorizontally");
+        this.flipImageVertically = config.getSingleParamAsBool("FlipImageVertically");
         this.acceptedSampleSuccessPercent = config.getSingleParamAsInt("AcceptedSampleSuccessPercent", 1, 100);
         this.distanceToCenterOfFrameFromPalletOriginMM_x = config.getSingleParamAsInt("DistanceToCenterOfFrameFromPalletOriginMM_x");
         this.distanceToCenterOfFrameFromPalletOriginMM_y = config.getSingleParamAsInt("DistanceToCenterOfFrameFromPalletOriginMM_y");
@@ -296,9 +298,9 @@ public class ImageParameters implements Serializable {
         return toPixelSearchAdjust;
     }
 
-    public boolean isFlipImageHorizontally() {
-        return flipImageHorizontally;
-    }
+    public boolean isFlipImageHorizontally() { return flipImageHorizontally; }
+
+    public boolean isFlipImageVertically() { return flipImageVertically; }
 
     public boolean isErrorCorrectionHeightAdjustmentEnabled() {
         return errorCorrectionHeightAdjustmentEnabled;
